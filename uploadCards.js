@@ -5,7 +5,7 @@ config();
 
 
 console.log(process.env.USER_ID);
-const URL_ROUTE = "CS/ml_flash_cards.js"; // DONT FORGET TO UPDATE
+const URL_ROUTE = "CS/new_file.js"; // DONT FORGET TO UPDATE
 const env_prefix = "ML_";
 const env_user_prefix = "";
 

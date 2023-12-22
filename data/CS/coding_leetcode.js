@@ -21,6 +21,10 @@ export default [
         answer: "new Set()"
     },
     {
+        question: "add new pair {a: 'b'} to map myMap",
+        answer: "myMap.set('a': 'b')"
+    },
+    {
         question: "Reverse an string called a in js",
         answer: "a.split('').reverse().join('')"
     },

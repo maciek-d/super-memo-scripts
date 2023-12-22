@@ -7,15 +7,16 @@ import config from "./helpers/import_env.js";
 config();
 
 // DONT FORGET TO UPDATE
-const env_prefix = "";
-const userId = process.env?.[`${env_prefix}USER_ID`];
+const env_user_prefix = "";
+const env_prefix = "GEO_IMG_";
+const userId = process.env?.[`${env_user_prefix}USER_ID`];
+const token = process.env?.[`${env_user_prefix}SUPER_MEMO_TOKEN`];
 const courseId = process.env?.[`${env_prefix}COURSE_ID`];
-const token = process.env?.[`${env_prefix}SUPER_MEMO_TOKEN`];
-const USE_CACHE = false;
+const USE_CACHE = true;
 
 const COURSE_FILENAME = "./data/geogussr/courses/GeoImages.json";
-const MAP_FILENAME = "./data/geogussr/map_images/cache/poles.json";
-const BASE_URL = 'https://public.fotki.com/GeogussrLearning/geohints-poles-map-/?show=all';
+const MAP_FILENAME = "./data/geogussr/map_images/cache/trees.json";
+const BASE_URL = 'https://public.fotki.com/GeogussrLearning/geohints-trees-map-/?show=all';
 
 const updateCourse = async (userId, courseId, token, courseName) => {
     const course = await getCourse(userId, courseId, token, courseName, USE_CACHE);
@@ -27,6 +28,10 @@ const updateCourse = async (userId, courseId, token, courseName) => {
     const updateList = await getMapImageUrlAndTitles(BASE_URL, mapFilePath);
     writeFileSync(mapFilePath, JSON.stringify(updateList, null, 4));
 
+
+    // const updateList = [
+    //     "Sources/Signs/Street/sweden_11.jpg"
+    // ];
     for (const card of course) {
         const pageId = card.number;
         const question = card.content.question;
@@ -170,6 +175,14 @@ async function getMapImageUrlAndTitles(url, mapFilePath) {
         // Extract the title and src attribute of all <img> tags within those <a> tags
         const titlesAndSources = Array.from(aTagsWithTitle).map(aTag => {
             const imgTag = aTag.querySelector('img');
+            if (!imgTag) return null;
+
+            const imgUrl = imgTag.src;
+            // filter out common images 
+            if (imgUrl.endsWith('icon-premium-small.gif') || imgUrl.endsWith('bigavatar.jpg')) {
+                return null;
+            }
+
             return imgTag ? [aTag.title, imgTag.src] : null;
         }).filter(item => item !== null); // Filter out any null values
 

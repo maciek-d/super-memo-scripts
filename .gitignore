@@ -6,3 +6,5 @@ yarn-error.log
 
 .env
 data/geogussr/map_images/*
+data/CS/cache/*
+data/CS/leetcode/*

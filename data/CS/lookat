@@ -1,0 +1,60 @@
+for this set of q and a's can you generate example problems that demonstrate the knowledge of what inputs will produce what outputs for these questions.
+
+return your pairs in a  markdown table instead of json format.
+Table should include only questions and answers
+
+Table should have only outputs as the answers.
+in most cases questions should be code that includes both inputs and the operation on the input
+
+for example 
+question a = [1,2,3];  a.map(i => i*2); console.log(a);  answer: [2,4,6]
+question a = [1,2,3];  for(let item of arr) {  console.log(item + 4)};  answer: 5 6 7
+
+Do not use the word like "Logs" just write pure output. Do not let output be the same as input. This is designed to test a persons programing knowledge. 
+
+Make the questions tricky. 
+If you have a question like this
+let number = 12; if(number > 10) { console.log('Greater'); }
+
+make it 
+let number = 12; 
+if(number > 10) { console.log('Greater'); } 
+console.log('Smaller');
+
+So the answer is 
+Greater
+Smaller
+
+The person cannot just read and guess they have to think
+
+If the answer is contained in the question alter it so it isnt contained in the question
+
+Do not use the same type of pairs more then once. If you already used some math in map function in another loop like a for ( ... .entries() ) try to loop over 2 arrays and add their values. Be creative so the tasks do not seem repetitive. 
+
+you can also do things like this
+let arr = ['x', 'y', 'z']; for(let [index, element] of arr.entries()) { console.log(index + element); }
+its not that usual so it makes it more tricky
+
+If you iterate over keys instead of indexes try to console log the keys in one problem and then console log the values by accessing them with keys in another.
+Like so
+let obj = { a: 10, b: 20 }; for(let x in obj) { console.log(obj[x] + 5); }
+
+let obj = { a: 10, b: 20 }; for(let x in obj) { console.log(x + 5); }
+
+this makes the user pay attention and also tests understanding
+I didnt use key on purpose because key gives away the answer. 
+
+
+1. uses names like a,b,c... and x,y,z... for consts and variables
+    example for(const x of a) instead of for(const item of items) 
+2. person has to think the questions are tricky and cannot be just guessed
+3. answer is pure output
+4. make questions be unique and creative
+5. use markup table with two columns question and answer
+6. No qoutes surrounding the whole question and answer even though input has qoutes
+
+example
+
+| Question | Answer |
+|----------|--------|
+| const a = [1, 2, 3]; a.map(x => { x * 3; return 0; }); console.log(a); | [0, 0, 0] |

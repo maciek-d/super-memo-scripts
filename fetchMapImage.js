@@ -1,9 +1,11 @@
 import axios from 'axios';
-import fs from 'fs/promises';
+import { writeFile } from 'fs/promises';
 import jsdom from 'jsdom';
 import path, { dirname } from 'path';
 import { fileURLToPath } from 'url';
+import { createDirectoryIfNotExists, readFileDataFullPath } from "./helpers/fileHelper.js";
 import { fetchLatLonFromShortUrl } from './helpers/googleMapApi.js';
+
 import config from "./helpers/import_env.js";
 config();
 
@@ -34,7 +36,7 @@ async function downloadImage(url, filepath) {
         });
 
         const fullPath = path.resolve(filepath);
-        await fs.writeFile(fullPath, response.data);
+        await writeFile(fullPath, response.data);
 
         console.log(`Image saved to ${fullPath}`);
     } catch (error) {
@@ -54,13 +56,12 @@ async function main() {
     const GOOGLE_API_KEY = process.env.GOOGLE_API_KEY;
     const mapType = 'hybrid';
     const defaultZoomLevel = 6; // Adjust as needed
-    const baseSavePath = 'data/geogussr/map_images/poles';
-
+    const baseSavePath = 'data/geogussr/map_images/pedestrian';
+    await createDirectoryIfNotExists(baseSavePath);
     // Read JSON data
     const __dirname = dirname(fileURLToPath(import.meta.url));
-    const jsonPath = path.join(__dirname, 'data/geogussr/Poles.json');
-    const jsonRaw = await fs.readFile(jsonPath, 'utf8');
-    const jsonData = JSON.parse(jsonRaw);
+    const jsonPath = path.join(__dirname, 'data/geogussr/Pedestrian.json');
+    const jsonData = await readFileDataFullPath(jsonPath);
 
     // Extract URLs
     const urls = extractUrlsFromJson(jsonData);
@@ -81,7 +82,7 @@ async function main() {
         "Rwanda", "Armenia", "Burundi", "Equatorial Guinea",
         "Albania", "Solomon Islands", "Lesotho", "Belize",
         "Bhutan", "Moldova", "Eritrea", "Guinea-Bissau",
-        "Latvia", "Bahrain", "East Timor", "US Virgin Islands",
+        "Bahrain", "East Timor",
         "Guam", "Gibraltar", "American Samoa", "Northern Mariana Islands",
         "Puerto Rico", "Guernsey", "Jersey", "Isle of Man",
         "Faroe Islands", "Cayman Islands", "Bermuda",
@@ -95,17 +96,16 @@ async function main() {
         "Christmas Island", "Cocos", "Macau", "Hong Kong"
     ];
 
-
     const tinyCountries = [
         "San Marino",
         "Liechtenstein", "Malta",
         "Andorra", "Micronesia",
         "Luxembourg",
-        "Guam", "American Samoa", "Northern Mariana Islands",
+        "Guam", "American Samoa", "Northern Mariana Island",
         "Guernsey", "Jersey", "Isle of Man",
         "Bermuda",
         "Singapore",
-        "Christmas Island", "Cocos", "Macau", "Hong Kong"
+        "Christmas Island", "Cocos", "Macau", "Hong Kong", "US Virgin"
     ];
 
     // Process each URL
