@@ -165,7 +165,7 @@ async function fetchSolution(browser, solutionUrl) {
                     // Extract the solution URL, HTML and text content
                     const solutionLink = await page.url();
                     const htmlSolution = await page.$eval('div.break-words', div => div.innerHTML);
-                    const textSolution = await page.$eval('div.break-words', async div => {
+                    const { lastDivSolutionText, firstDivSolutionText } = await page.$eval('div.break-words', div => {
                         // Function to recursively find the last element with a class starting with 'language-'
                         const findLastLanguageElement = (element) => {
                             const children = Array.from(element.children);
@@ -187,36 +187,37 @@ async function fetchSolution(browser, solutionUrl) {
 
                         // Start the recursive search from 'div.break-words'
                         const lastJsCodeElement = findLastLanguageElement(div);
+                        const lastDivSolutionText = lastJsCodeElement?.innerText ?? "";
+                        const firstDiv = div.querySelector('[class^="language-"]');
+                        const firstDivSolutionText = firstDiv?.innerText ?? "";
 
-                        const lastDivSolution = lastJsCodeElement?.innerText ?? "";
+                        // Return the inner text of the found element or empty string if not found
+                        return { lastDivSolutionText, firstDivSolutionText };
+                    });
+
+                    let textSolution = '';
+                    try {
+                        await prettier.format(lastDivSolutionText, {
+                            semi: false,
+                            parser: "babel"
+                        });
+                        textSolution = lastDivSolutionText;
+                    } catch (error) {
                         try {
-                            await prettier.format(lastDivSolution, {
+                            await prettier.format(firstDivSolutionText, {
                                 semi: false,
                                 parser: "babel"
                             });
-                            return lastDivSolution;
+                            textSolution = firstDivSolutionText;
                         } catch (error) {
-                            try {
-                                const firstDivSolution = div.querySelector('[class^="language-"]')?.innerText ?? "";
-                                await prettier.format(firstDivSolution, {
-                                    semi: false,
-                                    parser: "babel"
-                                });
-                                return firstDivSolution;
-                            } catch (error) {
-                            }
+                            console.log(`Skipping solution find it manually: ${solutionUrl}`);
                         }
-                        // Return the inner text of the found element or empty string if not found
-                        return "";
-                    });
-
+                    }
                     if (textSolution) {
                         console.log(`Solution found for: ${solutionUrl}`);
-                        await page.close();
                         return { solutionLink, htmlSolution, textSolution };
-                    } else {
-                        console.log(`Skipping solution find it manually: ${solutionUrl}`);
                     }
+                    await page.close();
                 }
             }
         }
