@@ -1,0 +1,34 @@
+FOR THE ALTERNATIVE SOLUTION:
+1. **Alternative Code**: THIS IS THE MOST IMPORTANT STEP! DO NOT SKIP THIS STEP! GENERATE and ANALYZE CODE for an ALTERNATIVE SOLUTION. RUN and TEST this code on the Input/Output EXAMPLES provided below and make sure that the ALTERNATIVE SOLUTION WORKS on the provided EXAMPLES. PROVIDE the OUTPUTS from running the code. DO NOT JUST STATE that the provided solution is efficient. if the solution is already efficient PROVIDE ALTERNATIVE CODE that does the same thing. DO NOT GIVE TESTING EXAMPLES in the same CODEBLOCK AS the ALTERNATIVE SOLUTION. RUN THE TESTS SEPERATELY and GIVE OUTPUTS in a seperate codeblock or section. DO NOT PROVIDE THE EXPECTED OUTPUT. PROVIDE THE ACTUAL OUTPUT by RUNNING THE CODE.
+// 1. DO NOT PROVIDE TEST RESULTS or CODE OUTPUT inside the ALTERNATIVE CODE CODEBLOCK. INSTEAD use SEPARATE CODEBLOCK if you are going to PROVIDE RESULTS.
+// 2. DO NOT STATE - Alternative code implementation will be provided here ACTUALLY PROVIDE THE CODE. 
+// 3. DO NOT SKIP ANY SECTIONS BELOW.
+// 4. DO NOT make a comment with Testing: or Output: in the same CODEBLOCK as the SOLUTION. INSTEAD provide another SECTION TITLE and use ANOTHER CODEBLOCK.
+2. **Alternative Solution Outputs**: STATE WHETHER ALTERNATIVE SOLUTION OUTPUTS were CORRECT or incorrect. THEN PROVIDE THE OUTPUTS HERE.
+3. **Preferred Solution**: Select the BEST fit SOLUTION. In this section simply WRITE `provided solution` or `alternative solution` based on the solution you pick. DO NOT WRITE ANYTHING ELSE HERE. PREFER `provided` solution UNLESS the `alternative solution` is MORE efficient OR MORE readable WITH THE SAME TIME COMPLEXITY. PREFER higher order functions. 
+4. **Solution Choice Reason**: Provide the reason for why you chose the `Preferred Solution`.
+
+When approaching the following LeetCode problem, it is CRUCIAL to structure your response with CLEAR and DETAILED sections, EACH marked by a DISTINCT **Title**. Follow this step-by-step guide to ensure COMPREHENSIVENESS and CLARITY:
+Problem:
+```
+```
+Extracted Solution:
+```
+```
+Input Output Examples:
+```
+```
+
+FOR THE QUESTION:
+1. **Summary**: Provide a CONCISE summary of the problem, focusing exclusively on the tasks to be accomplished. Begin directly with the action or task, using clear and brief language. aVOID INTRODUCTORY PHRASES like "The task is to" or "The challenge involves."
+2. **Description**: Offer a DETAILED explanation. Break down complex descriptions into NUMBERED LISTS for easier understanding. 
+3. **I/O**: Choose the MOST REPRESENTATIVE example from the provided 'Input Output Examples'. FORMAT: [input] => [output]. OMIT the words 'Input' and 'Output'; use the arrow for separation. SELECT examples that illustrate EDGE CASES and the MAIN CASE. if there is no one example that matches MAIN CASE and all the EDGE CASES you can provide MULTIPLE EXAMPLES selected from PROVIDED EXAMPLES.
+
+FOR THE SOLUTION:
+
+1. **Algo/Datastructure**: Clearly NAME the algorithm or main datastructure.
+2. **Code**: Extract the CODE from the given solution. Use the code provided and DO NOT MAKE ANY CHANGES.
+3. **Setup**: Extract the SETUP from the 'Extracted Solution' solution code. Present this as PARTIAL CODE in a CODEBLOCK, including FUNCTION HEADERS and initial VARIABLES setup that often happen before actual important processing happens. ADD comments for clarity to the code that setups the variables and functions if needed. Comments can contain example values unless the values are already present in the setup. example of VARIABLE SETUP would be `let count = 0` but also other VARIABLES that are setup before the actual logic. 
+4. **Enumerated Steps**: Describe the solution PROCESS in a step-by-step manner, focusing on MAIN CONCEPTS and excluding setup details. Use CONCISE yet PRECISE descriptions, and DO NOT OMIT difficult steps. If there are any IMAGES in the `Extracted Solution` section INCLUDE them as they are which means keep them as AN HTML TAG. The result should be a mix of PURE TEXT and HTML. 
+5. **Solution**: Provide an OVERVIEW of the solution, including ADDITIONAL DETAILS and CAVEATS not covered in the steps.
+6. **Time Complexity**: Clearly state the TIME COMPLEXITY of the solution.
