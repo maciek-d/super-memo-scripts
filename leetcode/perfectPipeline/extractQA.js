@@ -1,0 +1,183 @@
+export function extractQuestion({
+    response, title,
+    youtubeUrl, youtubeUrlJs,
+    solutionsUrl1, solutionsUrl2,
+    constraints, examples, problem
+}) {
+
+    const summary = extractSection(response, "Summary");
+    const description = extractSection(response, "Description");
+    const io = extractSection(response, "I\/O");
+
+    const problemNumber = extractFirstNumber(title);
+    const question = questionTemplate({
+        problemNumber, title, youtubeUrl, youtubeUrlJs,
+        solutionsUrl1, solutionsUrl2,
+        examples, constraints,  description, io,
+        summary: appendImages(problem, summary)
+    })
+
+    return question
+}
+
+export function extractAnswer({
+    response, solutionLink, solutionLink2
+}) {
+
+    // Extract sections from response
+    const algo = extractSection(response, "Algo\/Datastructure");
+    const code = extractSection(response, "Code");
+    const code2 = extractSection(response, "Alternative Code");
+    const steps = extractSection(response, "Enumerated Steps");
+    const steps2 = extractSection(response, "Enumerated Steps 2");
+    const solution = extractSection(response, "Solution");
+    const solution2 = extractSection(response, "Second Solution");
+    const complexity = extractSection(response, "Time Complexity");
+
+    // Format the answer string
+    const answer =
+        `<b><a href="${solutionLink}">${algo}</a></b>
+<div class="text-container"><br/>${solution}<br/><br/></div>
+<div>${code}</div>
+<div>${steps}</div>
+<div class="text-container">
+    <div>${code2}</div>
+    <div>${steps2}</div>
+    <a href="${solutionLink2}"><div>[1]</div></a>
+    <div>${solution2}</div>
+</div>
+<div class="text-container"><br/>${complexity}</div>`;
+
+    return answer;
+}
+
+function extractSection(text, sectionTitle) {
+    const lines = text.split('\n');
+    let capturing = false;
+    let section = [];
+    const headerRegexHash = new RegExp(`^#+ ${sectionTitle}`, 'i');
+    const headerRegexAsterisks = new RegExp(`^\\*\\*${sectionTitle}.?\\*\\*`, 'i');
+
+    const hashTitleExists = lines.some(line => headerRegexHash.test(line.trim()));
+
+    const sectionHeaderRegex = hashTitleExists ? headerRegexHash : headerRegexAsterisks;
+    for (const line of lines) {
+        // Check for start of the section
+        if (sectionHeaderRegex.test(line.trim())) {
+            capturing = true;
+            continue;
+        }
+
+        // Check for end of the section (next header starting with ##)
+        if (section.length !== 0 && capturing && line.trim().startsWith('##')) {
+            break;
+        }
+
+        if (capturing) {
+            section.push(line);
+        }
+    }
+
+    if ( section.length === 0 ) {
+        console.warn("couldnt find blocks for section", sectionTitle);
+    }
+    return stripCodeBlocks(section.join('\n').trim()).replaceAll("\n", "<br/>");
+}
+
+const extractFirstNumber = (str) => {
+    const result = str.match(/\d+/); // Regular expression to find numbers
+    return result ? parseInt(result[0]) : null; // Parse the first found number
+}
+
+
+function questionTemplate({
+    problemNumber,
+    title,
+    youtubeUrl, youtubeUrlJs,
+    solutionsUrl1, solutionsUrl2,
+    examples, constraints, summary, description, io,
+}) {
+
+    const style = `<style>
+        /* ${problemNumber}. */
+        .text-container {
+            cursor: pointer;
+            max-width: 20px;
+            white-space: normal; /* Allow the text to wrap */
+                overflow: hidden;
+            position: relative;
+            line-height: 1.4; /* Adjust for better readability */
+                transition: max-width 0.3s ease-in-out, max-height 0.3s ease-in-out; /* Smooth transition for expanding */
+                max-height: 1.4em; /* Set to line height to show only the first line */
+        }
+        .text-container::after {
+            content: '  ...  ';
+            position: absolute;
+            right: 0;
+            bottom: 0;
+            color: #d5d5d5;
+            background:  #f0f0f0;
+            width: 100%;
+            text-align: right;
+        }
+        .text-container:hover {
+            max-width: 350px; /* Adjust as needed for hover */
+                max-height: none; /* Allow it to expand to fit content */
+        }
+        .text-container:hover::after {
+            display: none; /* Hide the ellipsis on hover */
+        }
+    a:link, a:visited {
+        color: black;
+    }
+    resize-img. {
+        max-height:450px;
+        min-width:350px;
+        width:auto;
+        display:block;
+        margin:auto;
+        background-color: #131516;
+    }
+        </style>`
+
+    const question =
+        `${style}
+<span><b><a href="${problemLink}">${title}</a></b></span>
+<div>${summary}</div>
+<div class="text-container"><br/>${description}<br/><br/></div>
+<div>${io}</div>
+<div class="text-container"><br/>${examples}<br/></div>
+<div class="text-container"><br/>${constraints}<br/></div>
+<span>
+    <svg xmlns="http://www.w3.org/2000/svg" x="0px" y="0px" width="30" height="25" viewBox="0 0 48 48">
+        <a href="${youtubeUrl}">
+        <path fill="#FF3D00" d="M43.2,33.9c-0.4,2.1-2.1,3.7-4.2,4c-3.3,0.5-8.8,1.1-15,1.1c-6.1,0-11.6-0.6-15-1.1c-2.1-0.3-3.8-1.9-4.2-4C4.4,31.6,4,28.2,4,24c0-4.2,0.4-7.6,0.8-9.9c0.4-2.1,2.1-3.7,4.2-4C12.3,9.6,17.8,9,24,9c6.2,0,11.6,0.6,15,1.1c2.1,0.3,3.8,1.9,4.2,4c0.4,2.3,0.9,5.7,0.9,9.9C44,28.2,43.6,31.6,43.2,33.9z"></path><path fill="#FFF" d="M20 31L20 17 32 24z"></path>
+    </svg></a>
+    JS: <a href="${youtubeUrlJs}">
+        <svg xmlns="http://www.w3.org/2000/svg" x="0px" y="0px" width="30" height="25" viewBox="0 0 48 48">
+        <path fill="#FF3D00" d="M43.2,33.9c-0.4,2.1-2.1,3.7-4.2,4c-3.3,0.5-8.8,1.1-15,1.1c-6.1,0-11.6-0.6-15-1.1c-2.1-0.3-3.8-1.9-4.2-4C4.4,31.6,4,28.2,4,24c0-4.2,0.4-7.6,0.8-9.9c0.4-2.1,2.1-3.7,4.2-4C12.3,9.6,17.8,9,24,9c6.2,0,11.6,0.6,15,1.1c2.1,0.3,3.8,1.9,4.2,4c0.4,2.3,0.9,5.7,0.9,9.9C44,28.2,43.6,31.6,43.2,33.9z"></path><path fill="#FFF" d="M20 31L20 17 32 24z"></path>
+    </svg></a>
+    Solutions:
+        <a href="${solutionsUrl1}">[1]</a><br/>
+        <a href="${solutionsUrl2}">[2]</a>
+</span>`;
+    return question
+}
+
+function appendImages(sourceText, targetText) {
+    const imgTagRegex = /<img [^>]*src="[^"]*"[^>]*>/g;
+    const imgTags = sourceText.match(imgTagRegex);
+
+    if (imgTags) {
+        return targetText + imgTags.join('');
+    }
+    return targetText;
+}
+
+function stripCodeBlocks(text) {
+    return text.replace(/```javascript\n([\s\S]*?)\n```/g, (_match, p1) => {
+        // Replace spaces at the start of each line within the code block
+        const replaced = p1.replace(/^ +/gm, (spaces) => spaces.replace(/ /g, '&nbsp;'));
+        return replaced;
+    });
+}

@@ -1,0 +1,30 @@
+When describing the following LeetCode problem, it is CRUCIAL to structure your response with CLEAR and DETAILED SECTIONS, EACH marked by a DISTINCT **Title**. Follow this step-by-step guide to ensure COMPREHENSIVENESS and CLARITY:
+Problem:
+```
+```
+Solutions:
+```
+```
+Input Output Examples:
+```
+```
+
+FOR THE QUESTION:
+1. **Summary**: Provide a CONCISE summary of the problem, focusing exclusively on the tasks to be accomplished. Begin directly with the action or task, using clear and brief language. aVOID INTRODUCTORY PHRASES like "The task is to" or "The challenge involves."
+2. **Description**: Offer a DETAILED explanation. Break down complex descriptions into NUMBERED LISTS for easier understanding.
+3. **I/O**: Choose the MOST REPRESENTATIVE example from the provided 'Input Output Examples'. FORMAT: input => output. OMIT the words 'input' and 'output'; use the arrow for separation. Include [] if input and output are arrays. SELECT examples that illustrate EDGE CASES and the MAIN CASE. if there is no one example that matches MAIN CASE and all the EDGE CASES you can provide MULTIPLE EXAMPLES selected from PROVIDED EXAMPLES.
+
+FOR THE SOLUTION:
+
+1. **Algo/Datastructure**: Clearly NAME the algorithm or main datastructure. Example of algorithms is DFS, BFS, Binary search. If the algorithm used is custom describe it briefly.
+2. **Type**: Specify a problem type. This is to group the problem with similar problems like it.
+3. **Primary Solution Code**: Select the best solution from the provided solutions. Guilde your selections based on the following criteria. 1. Big O time comlexity. 2. Complexity and clarity. 3. Comments, pay attention to comments clarifying if the time complexity is correct. Also pay attention to other problems in the solution but use your own judgement as comments can also contain errors. Extract the CODE from the given solutions. Use the code provided and DO NOT MAKE ANY CHANGES.
+4. **Enumerated Steps 1**: Describe the solution PROCESS in a step-by-step manner, focusing on MAIN CONCEPTS and excluding setup details. Use CONCISE yet PRECISE descriptions, and DO NOT OMIT difficult steps. If there are any IMAGES in the `Extracted Solution` section INCLUDE them as they are which means keep them as AN HTML TAG. The result should be a mix of PURE TEXT and HTML.
+5. **Solution**: Provide an OVERVIEW of the solution, including ADDITIONAL DETAILS and CAVEATS not covered in the steps.
+6. **Secondary Solution Code**: Extract another CODE from the given solutions as the second best solution. Follow the same guidelines as in the first Solution Code. Use the code provided and DO NOT MAKE ANY CHANGES.
+7. **Enumerated Steps 2**: Describe the solution PROCESS in a step-by-step manner for the second solution.
+8. **Solution 2**: Provide an OVERVIEW of the solution 2, including ADDITIONAL DETAILS and CAVEATS not covered in the steps.
+9. **Time Complexity**: Clearly state the TIME COMPLEXITY of the solution.
+10. **Selected Solutions**: ONLY an ARRAY output ex: [1, 3] representing the selected solutions. TWO solutions should always be SELECTED.
+
+Generate an image for the problem. Make the image vivid and imaginative it doesn't have to be exactly what the problem is about but it should have some relation to the problem. It is more important that the image is easy to remember and pretty then that is describes the problem perfectly.
