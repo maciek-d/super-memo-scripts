@@ -1,31 +1,11 @@
-import { waitForXPathOrTimeout, skipBanner } from "./helpers.js"
+import { waitForXPathOrTimeout } from "./helpers.js"
 
-export async function getJsSolutions(browser) {
-    const solutionUrl = "https://leetcode.com/problems/two-sum/solutions/";
-    // await skipBanner(browser, problemUrl) // TODO add when fetching first solution
-
-    const solutionPage = await loadNextSolution(browser, null);
-
-    await switchToJavascriptCodeBlocks(solutionPage)
-
-
-    const solutionText = await getTextExcludingNonJsSections(solutionPage)
-    const solutionLink = await solutionPage.url();
-
-    console.log("here4", solutionText.length, solutionLink.length)
-    await solutionPage.close();
-
-    console.log("before crash");
-    //    return await fetchSolutions(browser, solutionUrl);
-}
-
-// TOOD test
-async function fetchSolutions(browser, solutionsUrl) {
+export async function fetchSolutions(browser, solutionsUrl) {
     const page = await browser.newPage();
     await page.goto(solutionsUrl, { waitUntil: 'domcontentloaded' });
 
     // wait for tag select svg arrow.
-        await page.waitForSelector('svg path[d="M20 8l-8 8-8-8"]');
+    await page.waitForSelector('svg path[d="M20 8l-8 8-8-8"]');
     const svgParentDiv = await page.$('div.absolute.right-4.top-0 svg path[d="M20 8l-8 8-8-8"]');
     await svgParentDiv.click();
 
@@ -44,8 +24,8 @@ async function fetchSolutions(browser, solutionsUrl) {
     await svgParentDiv.click();
     await sortByVotes(page);
 
-    const { solutions, solutionsUrls } =  await fetchSixSolutions(browser, page);
-    console.log(solutions.length, solutionsUrls.length);
+    const { solutions, solutionsUrls } = await fetchSolutionsHtml(browser, page);
+    console.log("solutions and urls fetched", solutions.length, solutionsUrls.length);
 
     return { solutions, solutionsUrls }
 }
@@ -123,44 +103,28 @@ async function waitForElementChange(page, selector, timeout = 10000) { // defaul
 }
 
 async function loadNextSolution(browser, block) {
-    // TODO add after testing
-    //    const solutionLinkElement = await block.$('a[href*="/problems/"]');
-    //    if (!solutionLinkElement) return null;
 
-    // Create a new page
-    const solutionPage = await browser.newPage();
-
+    const solutionLinkElement = await block.$('a[href*="/problems/"]');
+    if (!solutionLinkElement) return null;
     // Extract the href attribute from the solution link element
-    // const solutionUrl = await solutionLinkElement.evaluate(el => el.getAttribute('href'));
-    const solutionUrl = "https://leetcode.com/problems/two-sum/solutions/234005/neat-javascript-map-o-n/"
-
+    const solutionUrl = await solutionLinkElement.evaluate(el => el.getAttribute('href'));
     // Ensure the URL is absolute (not just a path)
     const baseUrl = 'https://leetcode.com'; // Adjust this if needed
     const fullUrl = solutionUrl.startsWith('http') ? solutionUrl : baseUrl + solutionUrl;
 
-    //    await Promise.allSettled([
-        //        solutionPage.waitForNavigation({ waitUntil: 'networkidle0' }),
-        //    ]);
+    // const fullUrl =
+    // "https://leetcode.com/problems/build-array-from-permutation/solutions/2294854/javascript-space-o-1-euclidean-division/"
 
     // Navigate to the solution URL in the new page
+    const solutionPage = await browser.newPage();
+    await solutionPage.setCacheEnabled(false);
     await solutionPage.goto(fullUrl)
 
     // Wait for the desired selector to load on the new page
     await solutionPage.waitForSelector('div.break-words');
-    //    await solutionPage.waitForFunction('document.readyState === "complete"');
+    await solutionPage.waitForTimeout(4000);
 
     return solutionPage;
-}
-
-function awaitKeyPress() {
-    return new Promise(resolve => {
-        process.stdin.setRawMode(true);
-        process.stdin.resume();
-        process.stdin.once('data', () => {
-            process.stdin.setRawMode(false);
-            resolve();
-        });
-    });
 }
 
 async function clickUntilElementLoads(page, clickElement, xpathToWaitFor, timeoutDuration = 200) {
@@ -176,7 +140,6 @@ async function clickUntilElementLoads(page, clickElement, xpathToWaitFor, timeou
     }
 }
 
-// Todo test
 async function switchToJavascriptCodeBlocks(page) {
     const jsOptionXPath = "//div[contains(@class, 'flex') and contains(@class, 'select-none')]/div[contains(text(), 'JavaScript')]"
 
@@ -191,14 +154,10 @@ async function switchToJavascriptCodeBlocks(page) {
                 }
             }, option);
 
-            // TODO remove after testing
-            // border reminder to remove after testing
             await page.evaluate(element => {
                 element.style.border = "2px solid red"; // Add your desired border style
             }, option);
 
-            // TODO remove after testing
-            await page.waitForTimeout(2000);
             const textContent = await page.evaluate(el => el.textContent, option);
             console.log("Attempting to click on element with text:", textContent);
 
@@ -209,154 +168,144 @@ async function switchToJavascriptCodeBlocks(page) {
     }
 }
 
-function shouldRemoveLanguage(text, languages) {
-    const javascriptPresent = /javascript/i.test(text);
-    return languages.some(lang => {
-        if (lang === 'C' || lang === 'Go' || lang === 'Swift') {
-            // Use more specific regex for these languages
-            const regex = new RegExp(`\\b${lang}\\b`, 'i');
-            return regex.test(text);
-        } else {
-            // For other languages, simple inclusion check with JavaScript exclusion
-            return text.includes(lang) && !javascriptPresent;
-        }
-    });
-}
-
-function addCodeMarkdown(element) {
-    const codeElements = element.querySelectorAll('code.language');
-    codeElements.forEach(code => {
-        const language = code.className.match(/language-(\w+)/)?.[1]; // Extract language from class
-        if (language) {
-            // Wrap code content with markdown-style code blocks
-            const formattedCode = `\`\`\`${language}\n${code.textContent}\n\`\`\``;
-            code.textContent = formattedCode;
-        }
-    });
-}
-
-// if the whole solution is long delete code blocks from comments first
-// maybe shorten them first and if they are still to long delete them
-
-// TODO if comments are short after deleting comments about langugage
-// you can load more comments
-
-// TODO Test
 async function getTextExcludingNonJsSections(page) {
-    await processCommentsAndSolution(page, solutionSelector); // Ensure this function is correctly adjusting the page content
-
-    const cleanedHTML = await stripNonJsCodeElements()
-
-    const textContent = await page.evaluate((htmlContent) => {
-        // Create a new temporary element to insert the HTML content
-        const tempDiv = document.createElement('div');
-        tempDiv.innerHTML = htmlContent;
-        const element = tempDiv.firstChild;
-
-        function preserveTextAndImages(el) {
-            let walker = document.createTreeWalker(
-                el, NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT, null, false
-            );
-            let node;
-            let textContent = '';
-
-            while (node = walker.nextNode()) {
-                if (node.nodeType === Node.TEXT_NODE) {
-                    textContent += node.textContent + ' ';
-                } else if (node.tagName === 'IMG') {
-                    textContent += node.outerHTML + ' ';
-                } else {
-                    // If it's not a text node or an <img> tag, consider removing it
-                    if (node.parentNode) {
-                        node.parentNode.removeChild(node);
-                    }
-                }
-            }
-            return textContent.trim();
-        }
-
-        return preserveTextAndImages(element); // Process the recreated element
-    }, cleanedHTML);
-
-    console.log(`textContent ${textContent}`)
-    return textContent;
-}
-
-async function stripNonJsCodeElements() {
-    const languagesToRemove = [
+    const commentsAndSolutionHtml = await processCommentsAndSolution(page);
+    const cleanedHTML = await stripNonJsCodeElements(commentsAndSolutionHtml, [
         'C', 'C++', 'Java', 'Python', 'C#', 'Ruby',
         'Swift', 'Go', 'Kotlin', 'Scala', 'Rust',
         'PHP', 'TypeScript', 'Racket', 'Erlang', 'SQL'
-    ];
+    ]);
 
-    const solutionSelector = 'div.relative.flex.w-full.flex-1.flex-col.overflow-y-auto';
+    const textContent = await preserveTextAndImages(cleanedHTML)
 
-    return await page.evaluate((languagesToRemove, solutionSelector) => {
-        const element = document.querySelector(solutionSelector);
-        if (!element) return '';
-
-        function shouldRemoveLanguage(text, languages) {
-            return languages.some(lang => text.includes(lang));
-        }
-
-        Array.from(element.querySelectorAll('h1')).forEach(h1 => {
-            if (shouldRemoveLanguage(h1.textContent, languagesToRemove)) {
-                let next = h1.nextSibling;
-                while (next && next.tagName !== 'H1') {
-                    let toRemove = next;
-                    next = next.nextSibling;
-                    toRemove.remove();
-                }
-                h1.remove();
-            }
-        });
-        return element.outerHTML;  // Return the modified HTML of the element
-    }, languagesToRemove, solutionSelector);
+    return textContent;
 }
 
-async function  fetchSixSolutions(browser, page) {
+async function preserveTextAndImages(cleanedHTML) {
+    const jsdom = await import('jsdom');
+    const { JSDOM } = jsdom;
+    const dom = new JSDOM(cleanedHTML);
+    const document = dom.window.document;
+
+    let textContent = '';
+
+    // Function to handle nodes recursively
+    function processNode(node) {
+        if (node.nodeType === 3) { // Node.TEXT_NODE
+            textContent += node.textContent + ' ';
+        } else if (
+            node.tagName === 'IMG' &&
+            !["avatar", "badges", "static_assets"].some(val => node.src.includes(val))
+        ) {
+            textContent += node.outerHTML + ' ';
+        } else if (node.childNodes.length > 0) {
+            node.childNodes.forEach(child => processNode(child));
+        }
+    }
+
+    processNode(document.body);
+
+    return textContent
+        .replace(/\/\*\*([\s\S]*?)(@param|@return)([\s\S]*?)\*\//g, '')
+        .trim();
+}
+
+async function stripNonJsCodeElements(htmlContent, languagesToRemove) {
+    const jsdom = await import('jsdom');
+    const { JSDOM } = jsdom;
+    const dom = new JSDOM(htmlContent);
+    const document = dom.window.document;
+
+    // Remove script button tags
+    document.querySelectorAll('script').forEach(script => script.remove());
+    document.querySelectorAll('button').forEach(button => button.remove());
+
+    // Remove elements with inline style visibility: hidden or display: none
+    document.querySelectorAll('[style*="visibility: hidden"], [style*="display: none"]').forEach(element => element.remove());
+
+    // Remove next and previous solution elements
+    document.querySelectorAll('.flex.justify-between.gap-4').forEach(element => element.remove());
+
+    // Remove elements with specific class names
+    document.querySelectorAll(
+        '.code_tabbar_outer, .testcase_tabbar_outer, .z-nav-1, .flexlayout__tabset_tabbar_outer_top, #ide-top-btns, .hidden'
+    ).forEach(element => element.remove());
+
+    // removes only from comments
+    document.querySelectorAll('.mt-4.flex-1 code').forEach(code => {
+        // Check if the code block's language should lead to removal
+        if (languagesToRemove.some(lang => code.className.includes(`language-${lang.toLowerCase()}`))) {
+            let commentDiv = code // up 4 levels
+                .parentNode.parentNode.parentNode.parentNode
+            if (commentDiv) {
+                commentDiv.remove(); // Remove the great-grandparent div of the code element
+            }
+        }
+    });
+
+    return document.body.innerHTML; // Return the modified HTML of the element
+}
+
+async function fetchSolutionsHtml(browser, page) {
     const solutionBlocks = await page.$$('.group.flex.w-full.cursor-pointer.flex-col');
 
     const solutions = []
     const solutionsUrls = []
 
     let solutionCount = 0
-    const GET_SOLUTIONS_AMOUNT = 6
+    const GET_SOLUTIONS_AMOUNT = 5
     for (const block of solutionBlocks) {
 
-        if(solutionCount++ === GET_SOLUTIONS_AMOUNT) { break; }
+        if (solutionCount++ === GET_SOLUTIONS_AMOUNT) { break; }
 
         const solutionPage = await loadNextSolution(browser, block);
         if (!solutionPage) continue;
 
         await switchToJavascriptCodeBlocks(solutionPage)
 
-        console.log("here3")
-
         const solutionText = await getTextExcludingNonJsSections(solutionPage)
         const solutionLink = await solutionPage.url();
 
-        console.log("here4")
         solutionsUrls.push(solutionLink);
         solutions.push(solutionText)
         await solutionPage.close();
     }
 
-    console.log("here5")
     return { solutions, solutionsUrls }
 }
 
-async function processCommentsAndSolution(page, solutionSelector) {
-    return await page.evaluate(selector => {
-        // Find the solution and comments container
-        const solutionAndCommentsContainer = document.querySelector(selector);
+async function processCommentsAndSolution(page) {
+
+    page.on('console', msg => console.log(msg.text()));
+
+    await page.waitForSelector(
+        'div.relative.flex.w-full.flex-1.flex-col.overflow-y-auto > div.mx-auto.w-full'
+    );
+
+    try {
+        await page.waitForSelector('div.mt-2.flex > div.opacity-1', { timeout: 5000 });
+    } catch (e) {
+        console.log("No comments for", page.url())
+        return await page.evaluate(() => document.body.outerHTML)
+    }
+
+    const commentsAndSolutionHtml = await page.evaluate(async () => {
+
+        const solutionSelector =
+            'div.relative.flex.w-full.flex-1.flex-col.overflow-y-auto > div.mx-auto.w-full'
+
+        const solutionAndCommentsContainer = document.querySelector(solutionSelector);
         if (!solutionAndCommentsContainer) {
+            console.log("Solution selector not found");
             return "";
         }
 
         // Find and process each comment within the container
-        const comments = solutionAndCommentsContainer.querySelectorAll('div.flex.w-full.flex-col.py-3');
-        comments.forEach(commentBlock => {
+        const comments = solutionAndCommentsContainer.querySelectorAll(
+            'div.mt-2.flex > div.opacity-1'
+        )
+
+        for (const commentBlock of comments) {
             const codeBlocks = commentBlock.querySelectorAll('code.language');
             let containsJavaScript = false;
 
@@ -365,15 +314,16 @@ async function processCommentsAndSolution(page, solutionSelector) {
                     containsJavaScript = true;
                 }
             });
-
             // If the comment contains a code block that is not JavaScript, remove the entire comment block
             if (codeBlocks.length > 0 && !containsJavaScript) {
                 commentBlock.remove();
             }
-        });
+        }
 
         // Return the HTML of the processed container
-        return solutionAndCommentsContainer.innerHTML;
-    }, solutionSelector);
+        return solutionAndCommentsContainer.outerHTML
+    });
+
+    return commentsAndSolutionHtml
 }
 

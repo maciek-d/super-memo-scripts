@@ -2,56 +2,83 @@ export function extractQuestion({
     response, title,
     youtubeUrl, youtubeUrlJs,
     solutionsUrl1, solutionsUrl2,
-    constraints, examples, problem
+    constraints, ioExamples, problem,
+    imageTag
 }) {
+    const summary = extractSection(response, "Summary").trim()
+    const description = extractSection(response, "Description").trim()
+    const bestIoExample = extractSection(response, "I\/O").trim()
 
-    const summary = extractSection(response, "Summary");
-    const description = extractSection(response, "Description");
-    const io = extractSection(response, "I\/O");
-
+    ioExamples = modifyImagesInPlace(ioExamples)
     const problemNumber = extractFirstNumber(title);
     const question = questionTemplate({
         problemNumber, title, youtubeUrl, youtubeUrlJs,
+        problemLink,
         solutionsUrl1, solutionsUrl2,
-        examples, constraints,  description, io,
-        summary: appendImages(problem, summary)
+        ioExamples, constraints, description, bestIoExample,
+        summary: summary + extractImageTags(problem),
+        imageTag
     })
 
     return question
 }
 
+export function extractAlgoAnswer({
+    response, solutionLink, imageTag
+}) {
+    const algo = extractSection(response, "Algo\/Datastructure");
+    const sentance = extractSection(response, "Flashcard Sentance");
+    const pitfalls = extractSection(response, "Common Mistakes");
+    const edgeCases = extractSection(response, "Edge Cases");
+    const intuition = extractSection(response, "Key Intuition");
+
+    const answer =
+        `<b><a href="${solutionLink}">${algo}</a></b>
+         <div>${imageTag}</div>
+         <div class="text-container"><br/>${sentance}<br/><br/></div>
+         <div>pitfalls</div>
+         <div class="text-container"><br/>${pitfalls}<br/><br/></div>
+         <div>edge cases</div>
+         <div class="text-container"><br/>${edgeCases}<br/><br/></div>
+         <div>intuition</div>
+         <div class="text-container"><br/>${intuition}<br/><br/></div>
+        `
+
+    return answer;
+}
+
 export function extractAnswer({
-    response, solutionLink, solutionLink2
+    response, solutionLink, solutionLink2, solutionImages, solutionImages2
 }) {
 
     // Extract sections from response
     const algo = extractSection(response, "Algo\/Datastructure");
-    const code = extractSection(response, "Code");
-    const code2 = extractSection(response, "Alternative Code");
-    const steps = extractSection(response, "Enumerated Steps");
+    const code = extractSection(response, "Primary Solution Code");
+    const code2 = extractSection(response, "Secondary Solution Code");
+    const steps = extractSection(response, "Enumerated Steps 1");
     const steps2 = extractSection(response, "Enumerated Steps 2");
     const solution = extractSection(response, "Solution");
-    const solution2 = extractSection(response, "Second Solution");
+    const solution2 = extractSection(response, "Solution 2");
     const complexity = extractSection(response, "Time Complexity");
 
     // Format the answer string
     const answer =
         `<b><a href="${solutionLink}">${algo}</a></b>
-<div class="text-container"><br/>${solution}<br/><br/></div>
+<div class="text-container"><br/>${solution + solutionImages}<br/><br/></div>
 <div>${code}</div>
 <div>${steps}</div>
 <div class="text-container">
     <div>${code2}</div>
     <div>${steps2}</div>
     <a href="${solutionLink2}"><div>[1]</div></a>
-    <div>${solution2}</div>
+    <div>${solution2 + solutionImages2}</div>
 </div>
 <div class="text-container"><br/>${complexity}</div>`;
 
     return answer;
 }
 
-function extractSection(text, sectionTitle) {
+export function extractSection(text, sectionTitle) {
     const lines = text.split('\n');
     let capturing = false;
     let section = [];
@@ -78,24 +105,24 @@ function extractSection(text, sectionTitle) {
         }
     }
 
-    if ( section.length === 0 ) {
+    if (section.length === 0) {
         console.warn("couldnt find blocks for section", sectionTitle);
     }
     return stripCodeBlocks(section.join('\n').trim()).replaceAll("\n", "<br/>");
 }
 
-const extractFirstNumber = (str) => {
+export const extractFirstNumber = (str) => {
     const result = str.match(/\d+/); // Regular expression to find numbers
     return result ? parseInt(result[0]) : null; // Parse the first found number
 }
 
-
 function questionTemplate({
     problemNumber,
     title,
+    problemLink,
     youtubeUrl, youtubeUrlJs,
     solutionsUrl1, solutionsUrl2,
-    examples, constraints, summary, description, io,
+    ioExamples, constraints, summary, description, bestIoExample,
 }) {
 
     const style = `<style>
@@ -143,10 +170,11 @@ function questionTemplate({
     const question =
         `${style}
 <span><b><a href="${problemLink}">${title}</a></b></span>
+<div>${imageTag}</div>
 <div>${summary}</div>
 <div class="text-container"><br/>${description}<br/><br/></div>
-<div>${io}</div>
-<div class="text-container"><br/>${examples}<br/></div>
+<div>${bestIoExample}</div>
+<div class="text-container"><br/>${ioExamples}<br/></div>
 <div class="text-container"><br/>${constraints}<br/></div>
 <span>
     <svg xmlns="http://www.w3.org/2000/svg" x="0px" y="0px" width="30" height="25" viewBox="0 0 48 48">
@@ -164,14 +192,30 @@ function questionTemplate({
     return question
 }
 
-function appendImages(sourceText, targetText) {
-    const imgTagRegex = /<img [^>]*src="[^"]*"[^>]*>/g;
+function extractImageTags(sourceText) {
+    const imgTagRegex = /<img [^>]*src="([^"]*)"[^>]*>/g;
     const imgTags = sourceText.match(imgTagRegex);
 
+    // surround images with a tag and add resize-image class
     if (imgTags) {
-        return targetText + imgTags.join('');
+        const modifiedImgTags = imgTags.map(tag => {
+            const srcMatch = tag.match(/src="([^"]*)"/);
+            if (srcMatch) {
+                const src = srcMatch[1];
+                return `<a href="${src}" target="_blank"><img class="resize-img" ${tag.slice(4)}</a>`;
+            }
+            return tag;
+        });
+        // append image to the end of text
+        modifiedImgTags.join('')
     }
-    return targetText;
+    return ''
+}
+
+function modifyImagesInPlace(text) {
+    return text.replace(/<img [^>]*src="([^"]*)"[^>]*>/g, (match, p1) => {
+        return `<a href="${p1}" target="_blank"><img class="resize-img" ${match.slice(4)}</a>`;
+    });
 }
 
 function stripCodeBlocks(text) {
@@ -180,4 +224,17 @@ function stripCodeBlocks(text) {
         const replaced = p1.replace(/^ +/gm, (spaces) => spaces.replace(/ /g, '&nbsp;'));
         return replaced;
     });
+}
+
+export function extractSolutionImages(
+    solutions, gptSolutionIndex, gptSolutionIndex2
+) {
+    const solution = solutions[gptSolutionIndex]
+    const solution2 = solutions[gptSolutionIndex2]
+    const solutionImages = extractImageTags(solution)
+    const solutionImages2 = extractImageTags(solution2)
+
+    const solutionLinkImages = modifyImagesInPlace(solutionImages)
+    const solutionLinkImages2 = modifyImagesInPlace(solutionImages2)
+    return [solutionLinkImages, solutionLinkImages2]
 }
