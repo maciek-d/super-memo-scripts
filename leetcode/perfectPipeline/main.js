@@ -11,7 +11,7 @@ import { postNewCard } from "./uploadFlashcard.js"
 import { extractQuestion, extractAnswer, extractFirstNumber, extractSection, extractAlgoAnswer, extractSolutionImages } from "./extractQA.js"
 import { createImage, getChatGPTResponse } from './gptApi.js';
 import { createFotkiAlbum, createFotkiFolder, uploadToFotki } from './fotkiApi.js';
-import { downloadImage, resizeImage } from './imageProcessing.js';
+import { downloadImage } from './imageProcessing.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const fetchProblemsPath = join(__dirname, './leetcode-site/fetchProblems.js');
@@ -149,7 +149,6 @@ function extractProblemIndex(response) {
     const sectionTitle = "Selected Solutions:"
     const regex = new RegExp(`${sectionTitle}\\s*.*?\\[([\\d,\\s]+)\\]`, 'i');
     const match = regex.exec(response);
-
 
     // Check if a match was found and return the array, converting it into an actual array
     if (match && match[1]) {
