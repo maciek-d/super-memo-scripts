@@ -17,9 +17,9 @@ FOR THE QUESTION:
 FOR THE SOLUTION:
 
 1. **Flashcard Sentance**: Write one short sentance that would be useful as the answer for this flashcard. Make sure it is useful in describing the way to solve the problem and it can stand alone as the answer. keep it brief.
-2. **Problem Algorithm**: Classify the problem based on the primary algorithm like "Dynamic Programming", "DFS", "BFS", "Recursion", "Two pointers" etc. Or more complicated algorithms if applicable you can use specific names liek quicksort
+2. **Problem Algorithm**: Classify the problem based on the primary algorithm like "Dynamic Programming", "DFS", "BFS", "Recursion", "Two pointers" etc. Or more complicated algorithms if applicable you can use specific names like quicksort.
 3. **Problem Datastructure**: Clasify the primary datastructure, then state the tags related to other data structures or algorithms that are also relevant (e.g., "Graphs", "Trees" )
-4. **Algo/Datastructure**: Combine the two previous answer but only keep the most useful information. Custom algorithm is not very descriptive so skip the algorithm in that case and only provide datastructure
+4. **Algo/Datastructure**: Give the algorithm used to solve the problem in primary solution a DESCRIPTIVE ALIAS label is as "Alias:". This will be the name for the specific algorithm used in the solution not alias for the generic algorithm used above. For example if you were naming algorithm for Product of Array Except Self - Leetcode 238. You could call it prefix - postfix. Add a dash (-) as a separator. Then Combine the two previous answer but only keep the most useful information. So this section should contain 2 algorithm names. One generic one very specific and descriptive to the problem.
 5. **Key Intuition**: Note down the main idea or intuition needed to solve the problem, without going into the specifics of the implementation.
 6. **Pseudocode/Algorithm Steps**: Include high-level steps or pseudocode explaining how to approach the problem. This avoids direct coding but provides a roadmap.
 7. **Edge Cases**: List common or tricky edge cases that are vital to handle to pass all the test cases.
@@ -27,11 +27,11 @@ FOR THE SOLUTION:
 9. **Common Mistakes**: Mention typical mistakes or misconceptions that could lead to incorrect solutions or failed submissions.
 10. **Related Problems**: List other LeetCode problems that are similar or could be solved with a similar approach. This is great for thematic studying.
 11. **Primary Solution Code**: Select the best solution from the provided solutions above in  the "Solutions:" section. Guilde your selections based on the following criteria. 1. Big O time comlexity. 2. Complexity and clarity. 3. Comments, pay attention to comments clarifying if the time complexity is correct. Also pay attention to other problems in the solution but use your own judgement as comments can also contain errors. Extract the CODE from the given solutions. Use the code provided and DO NOT MAKE ANY CHANGES.
-12. **Enumerated Steps 1**: Describe the solution PROCESS in a step-by-step manner, focusing on MAIN CONCEPTS and excluding setup details. Use CONCISE yet PRECISE descriptions, and DO NOT OMIT difficult steps. If there are any IMAGES in the `Extracted Solution` section INCLUDE them as they are which means keep them as AN HTML TAG. The result should be a mix of PURE TEXT and HTML.
-13. **Solution**: Provide an OVERVIEW of the solution, including ADDITIONAL DETAILS and CAVEATS not covered in the steps. ADD all of the IMG HTML TAGS here if they exist within that solution. So this is going to be plain text mixed with IMG HTML tags.
+12. **Enumerated Steps 1**: Describe the solution PROCESS in a step-by-step manner, focusing on MAIN CONCEPTS and excluding setup details. Use CONCISE yet PRECISE descriptions, and DO NOT OMIT difficult steps.
+13. **Solution**: Provide an OVERVIEW of the solution, including ADDITIONAL DETAILS and CAVEATS not covered in the steps.
 14. **Secondary Solution Code**: Extract another CODE from the given solutions as the second best solution. Follow the same guidelines as in the first Solution Code. Use the code provided and DO NOT MAKE ANY CHANGES.
 15. **Enumerated Steps 2**: Describe the solution PROCESS in a step-by-step manner for the second solution.
-16. **Solution 2**: Provide an OVERVIEW of the solution 2, including ADDITIONAL DETAILS and CAVEATS not covered in the steps. ADD all of the IMG HTML TAGS here if they exist within that solution. So this is going to be plain text mixed with IMG HTML tags.
+16. **Solution 2**: Provide an OVERVIEW of the solution 2, including ADDITIONAL DETAILS and CAVEATS not covered in the steps.
 17. **Time Complexity**: Clearly state the TIME COMPLEXITY of the solution. Also state space complexity where applicable.
 18. **Selected Solutions**: ONLY an ARRAY output ex: [1, 3] representing the selected solutions. TWO solutions should always be SELECTED.
 19. **Image Description**: Create a description for an image that will be used by another AI and is related to the problem. Make the description of the image VIVID and IMAGINATIVE it doesn't have to be exactly what the problem is about but it should have some relation to the problem. It is more important that the image is EASY to REMEMBER and pretty then that is describes the problem perfectly.

@@ -31,6 +31,7 @@ export function extractAlgoAnswer({
     const pitfalls = extractSection(response, "Common Mistakes");
     const edgeCases = extractSection(response, "Edge Cases");
     const intuition = extractSection(response, "Key Intuition");
+    const code = extractSection(response, "Primary Solution Code");
 
     const answer =
         `<b><a href="${solutionLink}">${algo}</a></b>
@@ -42,6 +43,8 @@ export function extractAlgoAnswer({
          <div class="text-container"><br/>${edgeCases}<br/><br/></div>
          <div>intuition</div>
          <div class="text-container"><br/>${intuition}<br/><br/></div>
+         <div>code</div>
+         <div class="text-container"><br/>${code}<br/><br/></div>
         `
 
     return answer;
