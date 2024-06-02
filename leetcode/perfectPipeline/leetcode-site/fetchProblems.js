@@ -4,10 +4,19 @@ export async function fetchSolutions(browser, solutionsUrl) {
     const page = await browser.newPage();
     await page.goto(solutionsUrl, { waitUntil: 'domcontentloaded' });
 
+    await page.setViewport({ width: 1280, height: 2000, deviceScaleFactor: 1 });
+    await page.setUserAgent('Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:123.0) Gecko/20100101 Firefox/123.0');
+
     // wait for tag select svg arrow.
-    await page.waitForSelector('svg path[d="M20 8l-8 8-8-8"]');
-    const svgParentDiv = await page.$('div.absolute.right-4.top-0 svg path[d="M20 8l-8 8-8-8"]');
-    await svgParentDiv.click();
+    await page.waitForSelector('div.absolute.right-4.top-0 svg path[d="M20 8l-8 8-8-8"]', { visible: true });
+    await page.screenshot({ path: 'data/debug/svg_arrow.png' });
+    const svgArrow = await page.$('div.absolute.right-4.top-0 svg path[d="M20 8l-8 8-8-8"]');
+
+    const svgParentDiv = await svgArrow.evaluateHandle(el => el.closest('div.cursor-pointer'))
+
+    await page.screenshot({ path: 'data/debug/firstTimeout.png' });
+    await svgParentDiv.evaluate(el => el.click());
+    await page.screenshot({ path: 'data/debug/clickLanguageArrow.png' });
 
     // wait for select js solutions tag only
     const jsFound = await waitForXPathOrTimeout(page, "//span[contains(., 'JavaScript')]", 2000);
@@ -19,14 +28,21 @@ export async function fetchSolutions(browser, solutionsUrl) {
 
     // select js only unless already selected
     await selectJavascriptSolutions(page)
+    await page.screenshot({ path: 'data/debug/selectJs.png' });
 
     // minimize tag select
-    await svgParentDiv.click();
+    await svgParentDiv.evaluate(el => el.click());
+    await page.screenshot({ path: 'data/debug/hideSelection.png' });
     await sortByVotes(page);
 
-    const { solutions, solutionsUrls } = await fetchSolutionsHtml(browser, page);
-    console.log("solutions and urls fetched", solutions.length, solutionsUrls.length);
-
+    const { solutions, solutionsUrls } = await fetchSolutionsHtml(browser, page)
+    if (!solutions || !solutionsUrls ||
+        solutions.length < 2 || solutionsUrls.length < 2
+    ) {
+        throw new Error(
+            `Failed to fetch leetcode solutions ${solutions} ${solutionsUrls}`
+        )
+    }
     return { solutions, solutionsUrls }
 }
 
@@ -36,9 +52,10 @@ async function selectJavascriptSolutions(page) {
     const notJavascript = await page.evaluate(element => {
         return element.classList.contains('bg-lc-fill-02') && element.classList.contains('text-lc-text-secondary');
     }, javascriptButton);
-    await page.waitForTimeout(20);
+    await page.waitForTimeout(500);
     if (notJavascript) {
-        await javascriptButton.click();
+        await javascriptButton.evaluate(el => el.click());
+        await page.waitForTimeout(4000)
     }
 }
 
@@ -47,121 +64,118 @@ async function sortByVotes(page) {
     const votesButton = await page.$x(votesButtonXPath);
 
     if (votesButton.length === 0) {
-        await page.waitForXPath("//button[contains(text(), 'Sort by')]", { visible: true });
-        let [sortByButton] = await page.$x("//button[contains(text(), 'Sort by')]");
+        await page.waitForXPath("//button[contains(text(), 'Sort by')]", { visible: true })
+        let [sortByButton] = await page.$x("//button[contains(text(), 'Sort by')]")
 
         await page.evaluate(element => {
-            element.style.border = "2px solid red"; // Add your desired border style
-        }, sortByButton);
+            element.style.border = "2px solid red" // Add your desired border style
+        }, sortByButton)
+        await page.screenshot({ path: 'data/debug/redVotesHighlight.png' });
 
-        const contentSelector = 'div.group.flex.w-full.cursor-pointer.flex-col';
-        await page.waitForSelector(contentSelector, { visible: true });
+        const contentSelector = 'div.group.flex.w-full.cursor-pointer.flex-col'
+        await page.waitForSelector(contentSelector, { visible: true })
 
-        const mostVotesXPath = "//div[contains(text(), 'Most Votes')]";
+        const mostVotesXPath = "//div[contains(text(), 'Most Votes')]"
 
         // Wait for dropdown to appear and content to load
-        await clickUntilElementLoads(page, sortByButton, mostVotesXPath);
+        await clickUntilElementLoads(page, sortByButton, mostVotesXPath)
 
         // After waiting, find and click the 'Most Votes' option
-        const mostVotesOption = await page.$x(mostVotesXPath);
-        await mostVotesOption[0].click();
+        const mostVotesOption = await page.$x(mostVotesXPath)
+        await mostVotesOption[0].evaluate(el => el.click());
+        await page.screenshot({ path: `data/debug/mostVotesOption.png` });
 
-        const solutionsSelector = 'div.relative.flex.w-full.flex-col > div.flex.w-full.flex-col';
-        await waitForElementChange(page, solutionsSelector, 4000);
+        const solutionsSelector = 'div.relative.flex.w-full.flex-col > div.flex.w-full.flex-col'
+        await waitForElementChange(page, solutionsSelector, 4000)
+        await page.screenshot({ path: `data/debug/solutionsLoaded.png` });
     }
     // Wait for content to load appropriate order
-    await page.waitForSelector('div.group:first-of-type');
+    await page.waitForSelector('div.group:first-of-type')
 }
 
 async function waitForElementChange(page, selector, timeout = 10000) { // default timeout 10 seconds
     return await page.evaluate((selector, timeout) => {
         return Promise.race([
             new Promise((resolve) => {
-                const targetNode = document.querySelector(selector);
+                const targetNode = document.querySelector(selector)
                 if (!targetNode) {
-                    resolve(false);
-                    return;
+                    resolve(false)
+                    return
                 }
 
                 const observerOptions = {
                     childList: true,
                     subtree: true,
-                };
+                }
 
                 const observer = new MutationObserver((_, observer) => {
-                    resolve(true);
-                    observer.disconnect();
-                });
+                    resolve(true)
+                    observer.disconnect()
+                })
 
-                observer.observe(targetNode, observerOptions);
+                observer.observe(targetNode, observerOptions)
             }),
             new Promise((resolve) => {
-                setTimeout(() => resolve(false), timeout); // resolve as false after the timeout
+                setTimeout(() => resolve(false), timeout) // resolve as false after the timeout
             })
-        ]);
-    }, selector, timeout);
+        ])
+    }, selector, timeout)
 }
 
 async function loadNextSolution(browser, block) {
 
-    const solutionLinkElement = await block.$('a[href*="/problems/"]');
-    if (!solutionLinkElement) return null;
+    const solutionLinkElement = await block.$('a[href*="/problems/"]')
+    if (!solutionLinkElement) return null
     // Extract the href attribute from the solution link element
-    const solutionUrl = await solutionLinkElement.evaluate(el => el.getAttribute('href'));
+    const solutionUrl = await solutionLinkElement.evaluate(el => el.getAttribute('href'))
     // Ensure the URL is absolute (not just a path)
-    const baseUrl = 'https://leetcode.com'; // Adjust this if needed
-    const fullUrl = solutionUrl.startsWith('http') ? solutionUrl : baseUrl + solutionUrl;
-
-    // const fullUrl =
-    // "https://leetcode.com/problems/build-array-from-permutation/solutions/2294854/javascript-space-o-1-euclidean-division/"
+    const baseUrl = 'https://leetcode.com' // Adjust this if needed
+    const fullUrl = solutionUrl.startsWith('http') ? solutionUrl : baseUrl + solutionUrl
 
     // Navigate to the solution URL in the new page
-    const solutionPage = await browser.newPage();
-    await solutionPage.setCacheEnabled(false);
+    const solutionPage = await browser.newPage()
+    await solutionPage.setCacheEnabled(false)
     await solutionPage.goto(fullUrl)
 
     // Wait for the desired selector to load on the new page
-    await solutionPage.waitForSelector('div.break-words');
-    await solutionPage.waitForTimeout(4000);
+    await solutionPage.waitForSelector('div.break-words')
+    await solutionPage.waitForTimeout(4000)
 
-    return solutionPage;
+    return solutionPage
 }
 
 async function clickUntilElementLoads(page, clickElement, xpathToWaitFor, timeoutDuration = 200) {
-    let elementFound = false;
+    let elementFound = false
     while (!elementFound) {
-        await clickElement.click();
+        await clickElement.evaluate(el => el.click());
 
-        const waitForElement = page.waitForXPath(xpathToWaitFor);
-        const timeout = new Promise(resolve => setTimeout(resolve, timeoutDuration));
-        const result = await Promise.race([waitForElement, timeout]);
+        const waitForElement = page.waitForXPath(xpathToWaitFor)
+        const timeout = new Promise(resolve => setTimeout(resolve, timeoutDuration))
+        const result = await Promise.race([waitForElement, timeout])
 
-        elementFound = Boolean(result);
+        elementFound = Boolean(result)
     }
 }
 
 async function switchToJavascriptCodeBlocks(page) {
     const jsOptionXPath = "//div[contains(@class, 'flex') and contains(@class, 'select-none')]/div[contains(text(), 'JavaScript')]"
+    const jsOptions = await page.$x(jsOptionXPath)
 
-    const jsOptions = await page.$x(jsOptionXPath);
-
-    for (const option of jsOptions) {
+    for (const [i, option] of jsOptions.entries()) {
         try {
             // Ensure the element is visible before clicking
             await page.evaluate((el) => {
-                if (!el.offsetParent) {
-                    el.scrollIntoView();
-                }
-            }, option);
+                el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+            }, option)
 
             await page.evaluate(element => {
-                element.style.border = "2px solid red"; // Add your desired border style
-            }, option);
+                element.style.border = "2px solid red" // Add your desired border style
+            }, option)
 
-            const textContent = await page.evaluate(el => el.textContent, option);
-            console.log("Attempting to click on element with text:", textContent);
-
-            await option.click();
+            await page.screenshot({ path: `data/debug/jsOption${i}.png` });
+            await option.evaluate(el => el.click())
+            await page.waitForTimeout(500)
+            await page.screenshot({ path: `data/debug/jsOptionSelected${i}.png` });
         } catch (error) {
             console.error("Error clicking on JavascriptOption option:", error);
         }
@@ -252,11 +266,10 @@ async function fetchSolutionsHtml(browser, page) {
     const solutions = []
     const solutionsUrls = []
 
-    let solutionCount = 0
     const GET_SOLUTIONS_AMOUNT = 5
-    for (const block of solutionBlocks) {
+    for (const [index, block] of solutionBlocks.entries()) {
 
-        if (solutionCount++ === GET_SOLUTIONS_AMOUNT) { break; }
+        if (index === GET_SOLUTIONS_AMOUNT) { break }
 
         const solutionPage = await loadNextSolution(browser, block);
         if (!solutionPage) continue;

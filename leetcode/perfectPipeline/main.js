@@ -1,4 +1,8 @@
-import puppeteer from 'puppeteer';
+import puppeteer from 'puppeteer-extra'
+import StealthPlugin from 'puppeteer-extra-plugin-stealth'
+
+// Add stealth plugin and use it
+puppeteer.use(StealthPlugin());
 
 import gptPkg from 'gpt3-tokenizer';
 const GPT3Tokenizer = gptPkg.default
@@ -33,7 +37,7 @@ function addObjectToFile(title, object, path) {
     const filePath = join(__dirname, path);
 
     const rawString = existsSync(filePath) ?
-        readFileSync(filePath) : "{}"
+        readFileSync(filePath, 'utf8') : "{}"
     const objects = JSON.parse(rawString)
     objects[title] = object
     writeFileSync(filePath, JSON.stringify(objects, null, 2))
@@ -42,9 +46,12 @@ function addObjectToFile(title, object, path) {
 function titleCompleted(title) {
     try {
         const responseFilePath = join(__dirname, './data/completed.js');
-        return JSON.parse(readFileSync(responseFilePath)).includes(title)
+        return JSON.parse(readFileSync(responseFilePath, 'utf8')).includes(title)
     } catch (e) {
-        return false
+        if (e.code === 'ENOENT') { // File not found
+            return false;
+        }
+        throw e
     }
 }
 
@@ -52,7 +59,7 @@ function saveCompleted(title, path) {
     const filePath = join(__dirname, path);
 
     const rawString = existsSync(filePath) ?
-        readFileSync(filePath) : "[]"
+        readFileSync(filePath, 'utf8') : "[]"
     const array = JSON.parse(rawString)
 
     if (!array.includes(title)) {
@@ -67,12 +74,13 @@ async function main() {
     //    await createFotkiAlbum(fotkiSid, fotkiUsername, "Leetcode", "images")
     //    await createFotkiAlbum(fotkiSid, fotkiUsername, "Leetcode", "thumbs")
 
-    const browser = await puppeteer.launch({ headless: false });
-    // const browser = await puppeteer.launch({ headless: "new" });
+    // const browser = await puppeteer.launch({ headless: false });
+
+    const browser = await puppeteer.launch({ headless: "new" });
     const problems = JSON.parse(readFileSync(problemPath, 'utf8'));
 
     for (const problem of problems) {
-        if (titleCompleted(title)) continue
+        if (titleCompleted(problem.title)) continue
         await processProblem({
             ...problem,
             ioExamples: problem.examples,
@@ -94,68 +102,82 @@ async function processProblem({
     youtubeUrlJs,
     browser,
 }) {
-    const { solutions, solutionsUrls } =
+    console.log(title)
+    const { solutions, solutionsUrls } = readSolutions(title) ??
         await fetchSolutions(browser, solutionsUrl)
     addObjectToFile(title, { solutions, solutionsUrls }, './data/solutions.js')
 
+    const savedResponse = readGptResponse(title)
     const prompt = readFileSync(promptPath, 'utf8');
     const userMessage = createUserMessage({ prompt, problem, solutions, ioExamples })
 
-    const savedResponse = getSavedRespose(title)
     const response = savedResponse ?? await getChatGPTResponse(prompt, userMessage)
     addObjectToFile(title, response, './data/gptResponses.js')
 
     const imageTag = await flashcardImageTag(title, response)
-    const [gptSolutionIndex, gptSolutionIndex2] = extractProblemIndex(response)
 
+    const [gptSolutionIndex, gptSolutionIndex2] = extractProblemIndex(response)
     const solutionsUrl1 = solutionsUrls[gptSolutionIndex]
     const solutionsUrl2 = solutionsUrls[gptSolutionIndex2]
+
+    if (!solutionsUrl1 || !solutionsUrl2) {
+        throw new Error(
+            `Failed to get solutionsUrls ${solutionsUrl1} ${solutionsUrl2}`
+        )
+    }
 
     const [solutionImages, solutionImages2] = extractSolutionImages(
         solutions, gptSolutionIndex, gptSolutionIndex2
     )
+
+    return
     const cleanedResponse = response
         .replaceAll("&lt;", "＜")
         .replaceAll("&gt;", "＞")
         .replace(/<(?!img|\/img)/gi, '＜')
-        .replace(/\*\*(.*?)\*\*/g, '<b>$1</b>')
 
-    const question = extractQuestion({
+    const { question, shortQuestion } = extractQuestion({
         response: cleanedResponse,
-        problemLink,
         title,
         youtubeUrl, youtubeUrlJs,
         solutionsUrl1, solutionsUrl2,
-        constraints, ioExamples, problem
+        constraints, ioExamples, problem,
+        problemLink, imageTag
     })
 
     const shortAnswer = extractAlgoAnswer({
-        response: cleanedResponse, solutionLink, imageTag
+        response: cleanedResponse, solutionsUrl1, imageTag
     })
 
     const answer = extractAnswer({
-        response: cleanedResponse, solutionLink, solutionLink2,
+        response: cleanedResponse, solutionsUrl1, solutionsUrl2,
         solutionImages, solutionImages2
     })
 
     await postNewCard(question, answer, courseId, targetParentNumber);
-    await postNewCard(question, shortAnswer, easyCourseId, easyTargetParentNumber);
+    await postNewCard(shortQuestion, shortAnswer, easyCourseId, easyTargetParentNumber);
     saveCompleted(title, './data/completed.js')
 
     await browser.close();
 }
 
 function extractProblemIndex(response) {
-    const sectionTitle = "Selected Solutions:"
-    const regex = new RegExp(`${sectionTitle}\\s*.*?\\[([\\d,\\s]+)\\]`, 'i');
-    const match = regex.exec(response);
+    const sectionTitle = "Selected Solutions";
 
-    // Check if a match was found and return the array, converting it into an actual array
+    // regex matches ##+ with new line or **
+    const hashRegex = new RegExp(`#{1,6}\\s*${sectionTitle}\\s*\\[\\s*([\\d,\\s]+)\\s*\\]`, 'i')
+    const asteriskRegex = new RegExp(`\\*\\*${sectionTitle}\\*\\*.*?\\[\\s*([\\d,\\s]+)\\s*\\]`, 'i')
+
+    const hashMatch = hashRegex.exec(response)
+    const asteriskMatch = asteriskRegex.exec(response)
+    const match = hashMatch ? hashMatch : asteriskMatch
+
     if (match && match[1]) {
-        return match[1].split(',').map(item => Number(item.trim()) - 1);
+        const indices = match[1].split(',').map(item => Number(item.trim()) - 1);
+        return indices;
     }
 
-    return [];
+    throw new Error(`Failed match index regex ${hashRegex} and ${asteriskRegex}`)
 }
 
 function createUserMessage({ prompt, problem, solutions, ioExamples }) {
@@ -214,23 +236,44 @@ function trimAfterFirstComment(text) {
     return match ? text.slice(0, match.index + match[0].length) : text;
 }
 
-function getSavedRespose(title) {
+function readSolutions(title) {
+    try {
+        const responseFilePath = join(__dirname, './data/solutions.js');
+        return JSON.parse(readFileSync(responseFilePath, 'utf8'))?.[title]
+    } catch (e) {
+        if (e.code === 'ENOENT') { // File not found
+            return {}
+        }
+        throw e
+    }
+}
+
+function readGptResponse(title) {
     try {
         const responseFilePath = join(__dirname, './data/gptResponses.js');
-        return JSON.parse(readFileSync(responseFilePath))?.[title]
+        return JSON.parse(readFileSync(responseFilePath, 'utf8'))?.[title]
     } catch (e) {
-        return null
+        if (e.code === 'ENOENT') { // File not found
+            return null
+        }
+        throw e
     }
 }
 
 async function flashcardImageTag(title, response) {
     const imageDescription = extractSection(response, "Image Description")
-    const url = await createImage(imageDescription)
-
     const imageName = extractFirstNumber(title)
+
     const imagePath = join(imageDir, `${imageName}.jpg`);
-    const image = await downloadImage(url)
-    await writeFile(imagePath, image)
+    const imageExists = existsSync(imagePath)
+    let image = imageExists ? readImage(imagePath) : null
+
+    if (!imageExists) {
+        const url = await createImage(imageDescription)
+        image = await downloadImage(url)
+
+        await writeFile(imagePath, image)
+    }
 
     const { imageSrc, thumbSrc } = await uploadToFotki({
         sessionId: fotkiSid,
@@ -242,6 +285,11 @@ async function flashcardImageTag(title, response) {
 
     return `<a href="${imageSrc}" target="_blank">
         <img src="${thumbSrc}" style="resize-img" /></a>`
+}
+
+function readImage(imagePath) {
+    const data = readFileSync(imagePath);
+    return Buffer.from(data);
 }
 
 main().then(() => {

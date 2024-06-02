@@ -29,16 +29,11 @@ export async function postNewCard(question, answer, courseId, targetParentNumber
         answer: JSON.stringify(answerObject)
     };
 
-    try {
-        const response = await axios.post(newCardUrl, json, {
-            headers: {
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json'
-            }
-        });
-        return response;
-    } catch (error) {
-        console.log(error);
-    }
-    return "";
-};
+    const response = await axios.post(newCardUrl, json, {
+        headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+        }
+    });
+    return response;
+}

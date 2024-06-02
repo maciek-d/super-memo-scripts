@@ -24,16 +24,16 @@ async function uploadImageToFotki({ imageData, name, username, sessionId, path }
     };
 
     // Make the POST request
-    const uploadResponse = await fetch(`https://public.fotki.com/${username}/${path}/`, {
-        method: 'POST',
-        headers: headers,
-        body: formData,
-        redirect: "follow"
-    });
+   const uploadResponse = await fetch(`https://public.fotki.com/${username}/${path}/`, {
+            method: 'POST',
+            headers: headers,
+            body: formData,
+            redirect: "follow"
+        });
 
-    if (!uploadResponse.ok) throw new Error(`HTTP error! status: ${uploadResponse.status}`);
+        if (!uploadResponse.ok) throw new Error(`HTTP error! status: ${uploadResponse.status}`);
 
-    return uploadResponse;
+        return uploadResponse;
 }
 
 export async function uploadToFotki(

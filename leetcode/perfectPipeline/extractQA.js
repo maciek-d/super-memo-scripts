@@ -3,11 +3,12 @@ export function extractQuestion({
     youtubeUrl, youtubeUrlJs,
     solutionsUrl1, solutionsUrl2,
     constraints, ioExamples, problem,
-    imageTag
+    imageTag, problemLink
 }) {
-    const summary = extractSection(response, "Summary").trim()
-    const description = extractSection(response, "Description").trim()
-    const bestIoExample = extractSection(response, "I\/O").trim()
+
+    const summary = extractSection(response, "Summary")
+    const description = extractSection(response, "Description")
+    const bestIoExample = extractSection(response, "I\/O")
 
     ioExamples = modifyImagesInPlace(ioExamples)
     const problemNumber = extractFirstNumber(title);
@@ -17,24 +18,32 @@ export function extractQuestion({
         solutionsUrl1, solutionsUrl2,
         ioExamples, constraints, description, bestIoExample,
         summary: summary + extractImageTags(problem),
-        imageTag
+        imageTag: `<div>${imageTag}</div>`
     })
 
-    return question
+    const shortQuestion = questionTemplate({
+        problemNumber, title, youtubeUrl, youtubeUrlJs,
+        problemLink,
+        solutionsUrl1, solutionsUrl2,
+        ioExamples, constraints, description, bestIoExample,
+        summary: summary + extractImageTags(problem),
+        imageTag: ""
+    })
+    return { question, shortQuestion }
 }
 
 export function extractAlgoAnswer({
-    response, solutionLink, imageTag
+    response, solutionsUrl1, imageTag
 }) {
     const algo = extractSection(response, "Algo\/Datastructure");
-    const sentance = extractSection(response, "Flashcard Sentance");
+    const sentance = extractSection(response, "Flashcard Sentence");
     const pitfalls = extractSection(response, "Common Mistakes");
     const edgeCases = extractSection(response, "Edge Cases");
     const intuition = extractSection(response, "Key Intuition");
     const code = extractSection(response, "Primary Solution Code");
 
     const answer =
-        `<b><a href="${solutionLink}">${algo}</a></b>
+        `<b><a href="${solutionsUrl1}">${algo}</a></b>
          <div>${imageTag}</div>
          <div class="text-container"><br/>${sentance}<br/><br/></div>
          <div>pitfalls</div>
@@ -51,7 +60,7 @@ export function extractAlgoAnswer({
 }
 
 export function extractAnswer({
-    response, solutionLink, solutionLink2, solutionImages, solutionImages2
+    response, solutionsUrl1, solutionsUrl2, solutionImages, solutionImages2
 }) {
 
     // Extract sections from response
@@ -60,20 +69,20 @@ export function extractAnswer({
     const code2 = extractSection(response, "Secondary Solution Code");
     const steps = extractSection(response, "Enumerated Steps 1");
     const steps2 = extractSection(response, "Enumerated Steps 2");
-    const solution = extractSection(response, "Solution");
+    const solution = extractSection(response, "Solution 1");
     const solution2 = extractSection(response, "Solution 2");
     const complexity = extractSection(response, "Time Complexity");
 
     // Format the answer string
     const answer =
-        `<b><a href="${solutionLink}">${algo}</a></b>
+        `<b><a href="${solutionsUrl1}">${algo}</a></b>
 <div class="text-container"><br/>${solution + solutionImages}<br/><br/></div>
 <div>${code}</div>
 <div>${steps}</div>
 <div class="text-container">
     <div>${code2}</div>
     <div>${steps2}</div>
-    <a href="${solutionLink2}"><div>[1]</div></a>
+    <a href="${solutionsUrl2}"><div>[1]</div></a>
     <div>${solution2 + solutionImages2}</div>
 </div>
 <div class="text-container"><br/>${complexity}</div>`;
@@ -85,8 +94,8 @@ export function extractSection(text, sectionTitle) {
     const lines = text.split('\n');
     let capturing = false;
     let section = [];
-    const headerRegexHash = new RegExp(`^#+ ${sectionTitle}`, 'i');
-    const headerRegexAsterisks = new RegExp(`^\\*\\*${sectionTitle}.?\\*\\*`, 'i');
+    const headerRegexHash = new RegExp(`^.*#+ ${sectionTitle}`, 'i');
+    const headerRegexAsterisks = new RegExp(`^.*\\*\\*${sectionTitle}.?\\*\\*`, 'i');
 
     const hashTitleExists = lines.some(line => headerRegexHash.test(line.trim()));
 
@@ -94,12 +103,26 @@ export function extractSection(text, sectionTitle) {
     for (const line of lines) {
         // Check for start of the section
         if (sectionHeaderRegex.test(line.trim())) {
+            // Account for section text on the same line
+            const content = line
+                .trim()
+                .replace(sectionHeaderRegex, '')
+                .trim()
+                .replace(/^\s*:\s*/, '')
+            if (content) {
+                section.push(content)
+            }
             capturing = true;
             continue;
         }
 
         // Check for end of the section (next header starting with ##)
-        if (section.length !== 0 && capturing && line.trim().startsWith('##')) {
+        if (section.length !== 0 && capturing &&
+            (
+                line.trim().startsWith('##') ||
+                (!hashTitleExists && line.trim().startsWith('**'))
+            )
+        ) {
             break;
         }
 
@@ -109,9 +132,11 @@ export function extractSection(text, sectionTitle) {
     }
 
     if (section.length === 0) {
-        console.warn("couldnt find blocks for section", sectionTitle);
+        throw new Error(`couldnt find blocks for section ${sectionTitle}`)
     }
-    return stripCodeBlocks(section.join('\n').trim()).replaceAll("\n", "<br/>");
+    return stripCodeBlocks(section.join('\n').trim())
+        .replaceAll("\n", "<br/>")
+        .replace(/\*\*(.*?)\*\*/g, '<b>$1</b>')
 }
 
 export const extractFirstNumber = (str) => {
@@ -126,54 +151,14 @@ function questionTemplate({
     youtubeUrl, youtubeUrlJs,
     solutionsUrl1, solutionsUrl2,
     ioExamples, constraints, summary, description, bestIoExample,
+    imageTag
 }) {
 
-    const style = `<style>
-        /* ${problemNumber}. */
-        .text-container {
-            cursor: pointer;
-            max-width: 20px;
-            white-space: normal; /* Allow the text to wrap */
-                overflow: hidden;
-            position: relative;
-            line-height: 1.4; /* Adjust for better readability */
-                transition: max-width 0.3s ease-in-out, max-height 0.3s ease-in-out; /* Smooth transition for expanding */
-                max-height: 1.4em; /* Set to line height to show only the first line */
-        }
-        .text-container::after {
-            content: '  ...  ';
-            position: absolute;
-            right: 0;
-            bottom: 0;
-            color: #d5d5d5;
-            background:  #f0f0f0;
-            width: 100%;
-            text-align: right;
-        }
-        .text-container:hover {
-            max-width: 350px; /* Adjust as needed for hover */
-                max-height: none; /* Allow it to expand to fit content */
-        }
-        .text-container:hover::after {
-            display: none; /* Hide the ellipsis on hover */
-        }
-    a:link, a:visited {
-        color: black;
-    }
-    resize-img. {
-        max-height:450px;
-        min-width:350px;
-        width:auto;
-        display:block;
-        margin:auto;
-        background-color: #131516;
-    }
-        </style>`
-
+    const style = getStyle(problemNumber)
     const question =
         `${style}
 <span><b><a href="${problemLink}">${title}</a></b></span>
-<div>${imageTag}</div>
+${imageTag}
 <div>${summary}</div>
 <div class="text-container"><br/>${description}<br/><br/></div>
 <div>${bestIoExample}</div>
@@ -236,8 +221,54 @@ export function extractSolutionImages(
     const solution2 = solutions[gptSolutionIndex2]
     const solutionImages = extractImageTags(solution)
     const solutionImages2 = extractImageTags(solution2)
+    console.log(solutionImages, solutionImages2)
 
     const solutionLinkImages = modifyImagesInPlace(solutionImages)
     const solutionLinkImages2 = modifyImagesInPlace(solutionImages2)
+    console.log(solutionLinkImages, solutionLinkImages2)
     return [solutionLinkImages, solutionLinkImages2]
+}
+
+function getStyle(problemNumber) {
+    return `<style>
+/* ${problemNumber}. */
+.text-container {
+    cursor: pointer;
+    max-width: 20px;
+    white-space: normal; /* Allow the text to wrap */
+        overflow: hidden;
+    position: relative;
+    line-height: 1.4; /* Adjust for better readability */
+        transition: max-width 0.3s ease-in-out, max-height 0.3s ease-in-out; /* Smooth transition for expanding */
+        max-height: 1.4em; /* Set to line height to show only the first line */
+}
+.text-container::after {
+    content: '  ...  ';
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    color: #d5d5d5;
+    background:  #f0f0f0;
+    width: 100%;
+    text-align: right;
+}
+.text-container:hover {
+    max-width: 350px; /* Adjust as needed for hover */
+        max-height: none; /* Allow it to expand to fit content */
+}
+.text-container:hover::after {
+    display: none; /* Hide the ellipsis on hover */
+}
+a:link, a:visited {
+    color: black;
+}
+resize-img. {
+    max-height:450px;
+    min-width:350px;
+    width:auto;
+    display:block;
+    margin:auto;
+    background-color: #131516;
+}
+</style>`
 }
