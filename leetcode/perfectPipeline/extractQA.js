@@ -195,19 +195,21 @@ function extractImageTags(sourceText) {
             return tag;
         });
         // append image to the end of text
-        modifiedImgTags.join('')
+        return modifiedImgTags.join('')
     }
     return ''
 }
 
 function modifyImagesInPlace(text) {
-    return text.replace(/<img [^>]*src="([^"]*)"[^>]*>/g, (match, p1) => {
-        return `<a href="${p1}" target="_blank"><img class="resize-img" ${match.slice(4)}</a>`;
-    });
+    return text.replace(/<img ([^>]*src="[^"]*"[^>]*)>/g, (_match, p1) => {
+        const srcMatch = p1.match(/src="([^"]*)"/);
+        const src = srcMatch ? srcMatch[1] : '';
+        return `<a href="${src}" target="_blank"><img class="resize-img" ${p1}></a>`;
+    })
 }
 
-function stripCodeBlocks(text) {
-    return text.replace(/```javascript\n([\s\S]*?)\n```/g, (_match, p1) => {
+export function stripCodeBlocks(text) {
+    return text.replace(/```javascript\n([\s\S]*?)\n\s*```/g, (_match, p1) => {
         // Replace spaces at the start of each line within the code block
         const replaced = p1.replace(/^ +/gm, (spaces) => spaces.replace(/ /g, '&nbsp;'));
         return replaced;
@@ -219,14 +221,11 @@ export function extractSolutionImages(
 ) {
     const solution = solutions[gptSolutionIndex]
     const solution2 = solutions[gptSolutionIndex2]
+
     const solutionImages = extractImageTags(solution)
     const solutionImages2 = extractImageTags(solution2)
-    console.log(solutionImages, solutionImages2)
 
-    const solutionLinkImages = modifyImagesInPlace(solutionImages)
-    const solutionLinkImages2 = modifyImagesInPlace(solutionImages2)
-    console.log(solutionLinkImages, solutionLinkImages2)
-    return [solutionLinkImages, solutionLinkImages2]
+    return [solutionImages, solutionImages2]
 }
 
 function getStyle(problemNumber) {

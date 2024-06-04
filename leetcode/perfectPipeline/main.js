@@ -12,7 +12,7 @@ import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { existsSync, writeFileSync, readFileSync } from 'fs';
 import { postNewCard } from "./uploadFlashcard.js"
-import { extractQuestion, extractAnswer, extractFirstNumber, extractSection, extractAlgoAnswer, extractSolutionImages } from "./extractQA.js"
+import { extractQuestion, extractAnswer, extractFirstNumber, extractSection, extractAlgoAnswer, extractSolutionImages, stripCodeBlocks } from "./extractQA.js"
 import { createImage, getChatGPTResponse } from './gptApi.js';
 import { createFotkiAlbum, createFotkiFolder, uploadToFotki } from './fotkiApi.js';
 import { downloadImage } from './imageProcessing.js';
@@ -76,18 +76,21 @@ async function main() {
 
     // const browser = await puppeteer.launch({ headless: false });
 
-    const browser = await puppeteer.launch({ headless: "new" });
+    let browser = null
     const problems = JSON.parse(readFileSync(problemPath, 'utf8'));
 
     for (const problem of problems) {
         if (titleCompleted(problem.title)) continue
+        browser = await puppeteer.launch({
+            headless: "new",
+            protocolTimeout: 120000
+        });
         await processProblem({
             ...problem,
             ioExamples: problem.examples,
             browser,
         })
-        //TODO remove
-        break;
+        browser.close()
     }
 }
 
@@ -130,7 +133,6 @@ async function processProblem({
         solutions, gptSolutionIndex, gptSolutionIndex2
     )
 
-    return
     const cleanedResponse = response
         .replaceAll("&lt;", "＜")
         .replaceAll("&gt;", "＞")
@@ -162,14 +164,24 @@ async function processProblem({
 }
 
 function extractProblemIndex(response) {
-    const sectionTitle = "Selected Solutions";
+    const sectionTitle = "SelectedSolutions";
 
-    // regex matches ##+ with new line or **
-    const hashRegex = new RegExp(`#{1,6}\\s*${sectionTitle}\\s*\\[\\s*([\\d,\\s]+)\\s*\\]`, 'i')
-    const asteriskRegex = new RegExp(`\\*\\*${sectionTitle}\\*\\*.*?\\[\\s*([\\d,\\s]+)\\s*\\]`, 'i')
+    // regex matches titles starting with ##+ or **
+    const hashRegex = new RegExp(`#{1,6}\\s*${sectionTitle}\\s*\\[\\s*([\\d,\\s]+)\\s*\\]`, 'i');
+    const asteriskRegex = new RegExp(`\\*\\*${sectionTitle}\\*\\*.*?\\[\\s*([\\d,\\s]+)\\s*\\]`, 'i');
 
-    const hashMatch = hashRegex.exec(response)
-    const asteriskMatch = asteriskRegex.exec(response)
+    const noCodeBlocks = response.replace(/```javascript\n([\s\S]*?)\n\s*```/g, (_match, p1) => {
+        return p1
+    });
+
+    const cleanedResponse = noCodeBlocks
+        .replaceAll(":", "")
+        .replaceAll("\\", "")
+        .replaceAll("\n", "")
+        .replaceAll(" ", "")
+
+    const hashMatch = hashRegex.exec(cleanedResponse)
+    const asteriskMatch = asteriskRegex.exec(cleanedResponse)
     const match = hashMatch ? hashMatch : asteriskMatch
 
     if (match && match[1]) {
