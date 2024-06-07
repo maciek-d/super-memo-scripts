@@ -35,12 +35,12 @@ export function extractQuestion({
 export function extractAlgoAnswer({
     response, solutionsUrl1, imageTag
 }) {
-    const algo = extractSection(response, "Algo\/Datastructure");
-    const sentance = extractSection(response, "Flashcard Sentence");
-    const pitfalls = extractSection(response, "Common Mistakes");
-    const edgeCases = extractSection(response, "Edge Cases");
-    const intuition = extractSection(response, "Key Intuition");
-    const code = extractSection(response, "Primary Solution Code");
+    const algo = extractSection(response, "Algo\/Datastructure")
+    const sentance = extractSection(response, "Flashcard Sentence")
+    const pitfalls = extractSection(response, "Common Mistakes")
+    const edgeCases = extractSection(response, "Edge Cases")
+    const intuition = extractSection(response, "Key Intuition")
+    const code = extractSection(response, "Primary Solution Code")
 
     const answer =
         `<b><a href="${solutionsUrl1}">${algo}</a></b>
@@ -56,7 +56,7 @@ export function extractAlgoAnswer({
          <div class="text-container"><br/>${code}<br/><br/></div>
         `
 
-    return answer;
+    return answer
 }
 
 export function extractAnswer({
@@ -98,6 +98,8 @@ export function extractSection(text, sectionTitle) {
     const headerRegexAsterisks = new RegExp(`^.*\\*\\*${sectionTitle}.?\\*\\*`, 'i');
 
     const hashTitleExists = lines.some(line => headerRegexHash.test(line.trim()));
+    // "Algo\/Datastructure"
+    //**Algo/Datastructure**: Sorting - Max Width Between Consecutive X-Coordinates
 
     const sectionHeaderRegex = hashTitleExists ? headerRegexHash : headerRegexAsterisks;
     for (const line of lines) {
@@ -120,7 +122,7 @@ export function extractSection(text, sectionTitle) {
         if (section.length !== 0 && capturing &&
             (
                 line.trim().startsWith('##') ||
-                (!hashTitleExists && line.trim().startsWith('**'))
+                (!hashTitleExists && /.*\*\*/.test(line.trim()))
             )
         ) {
             break;

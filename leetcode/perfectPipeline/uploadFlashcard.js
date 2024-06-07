@@ -29,11 +29,22 @@ export async function postNewCard(question, answer, courseId, targetParentNumber
         answer: JSON.stringify(answerObject)
     };
 
-    const response = await axios.post(newCardUrl, json, {
-        headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
+    try {
+
+        const response = await axios.post(newCardUrl, json, {
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            }
+        });
+        if (response.status !== 200) {
+            throw new Error(`Failed to post new card: ${response.statusText} (${response.status}) for ${courseId}`);
         }
-    });
-    return response;
+        return response;
+    } catch (error) {
+        if (error.response && error.response.status === 403) {
+            throw new Error("Invalid Supermemo token")
+        }
+        throw error
+    }
 }

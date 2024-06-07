@@ -219,8 +219,10 @@ async function preserveTextAndImages(cleanedHTML) {
 
     processNode(document.body);
 
+    const endOfUsefulTextRegex = new RegExp(`Saved Ln 1, Col 1 You need to.*`, 's');
     return textContent
         .replace(/\/\*\*([\s\S]*?)(@param|@return)([\s\S]*?)\*\//g, '')
+        .replace(endOfUsefulTextRegex, '')
         .trim();
 }
 
@@ -298,7 +300,6 @@ async function processCommentsAndSolution(page) {
     try {
         await page.waitForSelector('div.mt-2.flex > div.opacity-1', { timeout: 5000 });
     } catch (e) {
-        console.log("No comments for", page.url())
         return await page.evaluate(() => document.body.outerHTML)
     }
 

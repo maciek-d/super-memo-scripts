@@ -170,9 +170,12 @@ function extractProblemIndex(response) {
     const hashRegex = new RegExp(`#{1,6}\\s*${sectionTitle}\\s*\\[\\s*([\\d,\\s]+)\\s*\\]`, 'i');
     const asteriskRegex = new RegExp(`\\*\\*${sectionTitle}\\*\\*.*?\\[\\s*([\\d,\\s]+)\\s*\\]`, 'i');
 
-    const noCodeBlocks = response.replace(/```javascript\n([\s\S]*?)\n\s*```/g, (_match, p1) => {
-        return p1
-    });
+    const noCodeBlocks = response
+        .replace(/```javascript\n([\s\S]*?)\n\s*```/g, (_match, p1) => {
+            return p1
+        }).replace(/```json\n([\s\S]*?)\n\s*```/g, (_match, p1) => {
+            return p1
+        })
 
     const cleanedResponse = noCodeBlocks
         .replaceAll(":", "")
