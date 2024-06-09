@@ -19,7 +19,8 @@ import { downloadImage } from './imageProcessing.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const fetchProblemsPath = join(__dirname, './leetcode-site/fetchProblems.js');
-const problemPath = join(__dirname, '../../data/CS/leetcode/new/array_problems_data.js');
+const TAG = "string"
+const problemPath = join(__dirname, `../../data/CS/leetcode/new/${TAG}_problems_data.js`);
 const { fetchSolutions } = await import(fetchProblemsPath);
 
 const promptPath = join(__dirname, './data/prompt.txt');
@@ -174,6 +175,8 @@ function extractProblemIndex(response) {
         .replace(/```javascript\n([\s\S]*?)\n\s*```/g, (_match, p1) => {
             return p1
         }).replace(/```json\n([\s\S]*?)\n\s*```/g, (_match, p1) => {
+            return p1
+        }).replace(/```\s*([\s\S]*?)\s*```/g, (_match, p1) => {
             return p1
         })
 

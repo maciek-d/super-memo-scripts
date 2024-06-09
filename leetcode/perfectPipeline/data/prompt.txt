@@ -9,7 +9,7 @@ Input Output Examples:
 ```
 ```
 
-// - MAKE SURE TO KEEP SECTION NAMES AS IS. DO NOT CHANGE THEM OR IMPROVE THEM. EX: I/O should remain I/O not change to other name.
+// - MAKE SURE TO KEEP SECTION NAMES AS IS. DO NOT CHANGE THEM OR IMPROVE THEM. EX: I/O should remain I/O not change to other name. DO NOT SKIP ANY SECTIONS EVEN IF THEY ARE SIMILAR. KEEP all sections on the TOP LEVEL if they are listed here. DO NOT add them as subsections.
 
 FOR THE QUESTION:
 1. **Summary**: Provide a CONCISE summary of the problem, focusing exclusively on the tasks to be accomplished. Begin directly with the action or task, using clear and brief language. AVOID INTRODUCTORY PHRASES like "The task is to" or "The challenge involves".
