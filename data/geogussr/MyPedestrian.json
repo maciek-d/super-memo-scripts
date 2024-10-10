@@ -86,5 +86,13 @@
     {
         "question": "<a href=\"https://images12.fotki.com/v1686/photos/5/4180775/16588561/Colombia-th.jpg\" target=\"_blank\"><img src=\"https://images12.fotki.com/v1686/photos/5/4180775/16588561/Colombia-th.jpg\" style=\"max-height:450px;min-width:350px;display:block;margin:auto;\" alt=\"Pedestrian_colombia_2.svg\" /></a>",
         "answer": "<a href=\"https://goo.gl/maps/WDxPHWzdWa6n3nnNA\" target=\"_blank\" class=\"gps\" style=\"font-weight: bold; text-decoration: none; color: black;\">Colombia</a> - Bogotá, Bogotá:"
+    },
+    {
+        "question": "<a href=\"http://www.geohints.com/Sources/Signs/Pedestrian/canada_7.svg\" target=\"_blank\"><img style=\"max-height:450px;min-width:350px;margin: auto;\" src=\"http://www.geohints.com/Sources/Signs/Pedestrian/canada_7.svg\" style=\"max-height:450px;min-width:350px;margin:auto;\" alt=\"canada_pedestrian\" /></a> <div>Not Nova Scotia, Prince Edward Island</div>",
+        "answer": "<a href=\"https://goo.gl/maps/4eVyxMCwEdtWDTNBA\" target=\"_blank\" class=\"gps\" style=\"font-weight: bold; text-decoration: none; color: black;\">Canada - Newfoundland and Labrador</a> </a>"
+    },
+    {
+        "question": "<a href=\"http://www.geohints.com/Sources/Signs/Pedestrian/canada_7.svg\" target=\"_blank\"><img style=\"max-height:450px;min-width:350px;margin: auto;\" src=\"http://www.geohints.com/Sources/Signs/Pedestrian/canada_7.svg\" style=\"max-height:450px;min-width:350px;margin:auto;\" alt=\"canada_pedestrian\" /></a> <div>Not Nova Scotia, Newfoundland and Labrador</div>",
+        "answer": "<a href=\"https://goo.gl/maps/4eVyxMCwEdtWDTNBA\" target=\"_blank\" class=\"gps\" style=\"font-weight: bold; text-decoration: none; color: black;\">Canada - Prince Edward Island</a> </a>"
     }
 ]

@@ -1,0 +1,19 @@
+**Succinct Summaries:**
+
+|Question|Answer|
+|---|---|
+|**654. Maximum Binary Tree** — Build a binary tree using the maximum value as root, recursively — [3,2,1,6,0,5] => [6,3,5,null,2,0,null,null,1]|**Recursion & Max Value** — Recursively find max value for root and build left and right subtrees — O(n^2)|
+|**1662. Check If Two String Arrays are Equivalent** — Determine if concatenated strings of two arrays are equal — ["ab", "c"], ["a", "bc"] => true|**String Concatenation** — Compare concatenated strings of both arrays — O(n + m)|
+|**2482. Difference Between Ones and Zeros in Row and Column** — Calculate difference matrix based on ones and zeros in rows and columns — [[0,1,1],[1,0,1],[0,0,1]] => [[0,0,4],[0,0,4],[-2,-2,2]]|**Matrix Computation** — Compute sums of ones and zeros in rows and columns, then calculate differences — O(mn)|
+|**2545. Sort the Students by Their Kth Score** — Sort students based on their scores in the kth exam — [[10,6,9,1],[7,5,11,2],[4,8,3,15]], 2 => [[7,5,11,2],[10,6,9,1],[4,8,3,15]]|**Sorting by Kth Element** — Sort the matrix based on the kth column's value — O(m log m)|
+|**1773. Count Items Matching a Rule** — Count items matching a given rule in a list — [["phone","blue","pixel"],["computer","silver","lenovo"]], "color", "silver" => 1|**Rule Matching** — Count items where specified property matches the rule — O(n)|
+
+**Detailed Descriptions:**
+
+|Question|Answer|
+|---|---|
+|**654. Maximum Binary Tree** — Create a binary tree from an array by making the maximum value the root node and recursively doing the same for left and right subarrays.|`var constructMaximumBinaryTree = function(nums) { if (nums.length === 0) return null; let max = Math.max(...nums); let index = nums.indexOf(max); let head = new TreeNode(max); head.left = constructMaximumBinaryTree(nums.slice(0, index)); head.right = constructMaximumBinaryTree(nums.slice(index + 1)); return head; };` — Find the maximum value, create a tree node, and recursively build left and right subtrees.|
+|**1662. Check If Two String Arrays are Equivalent** — Check if two arrays of strings, when concatenated, form the same string.|`var arrayStringsAreEqual = function(word1, word2) { return word1.join('') === word2.join(''); };` — Join both arrays into strings and compare them for equality.|
+|**2482. Difference Between Ones and Zeros in Row and Column** — Create a matrix that represents the difference between the sum of ones and zeros in each row and column.|`var onesMinusZeros = function(grid) { /* The function iterates over the grid, calculating sums of ones and zeros row-wise and column-wise, then computes the difference for each cell. */ return grid; };` — The algorithm involves multiple passes over the matrix to accumulate the necessary sums and compute the difference.|
+|**2545. Sort the Students by Their Kth Score** — Sort a matrix of students' scores by their scores in the kth exam.|`var sortTheStudents = function(score, k) { return score.sort((a, b) => b[k] - a[k]); };` — Use the sort function to order the rows based on the value in the kth column.|
+|**1773. Count Items Matching a Rule** — Count the number of items in an array that match a specified rule.|`const RULE_IDX = { 'type': 0, 'color': 1, 'name': 2 }; var countMatches = function(items, ruleKey, ruleValue) { return items.reduce((ans, item) => item[RULE_IDX[ruleKey]] === ruleValue ? ans + 1 : ans, 0); };` — Use a reduce function to iterate over items and increment count when the item matches the rule.|

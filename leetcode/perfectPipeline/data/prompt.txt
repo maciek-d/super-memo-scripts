@@ -1,13 +1,4 @@
 When describing the following LeetCode problem, it is CRUCIAL to structure your response with CLEAR and DETAILED SECTIONS, EACH marked by a DISTINCT **Title**. Follow this step-by-step guide to ensure COMPREHENSIVENESS and CLARITY:
-Problem:
-```
-```
-Solutions:
-```
-```
-Input Output Examples:
-```
-```
 
 // - MAKE SURE TO KEEP SECTION NAMES AS IS. DO NOT CHANGE THEM OR IMPROVE THEM. EX: I/O should remain I/O not change to other name. DO NOT SKIP ANY SECTIONS EVEN IF THEY ARE SIMILAR. KEEP all sections on the TOP LEVEL if they are listed here. DO NOT add them as subsections.
 
@@ -17,23 +8,31 @@ FOR THE QUESTION:
 3. **I/O**: Choose the MOST REPRESENTATIVE example from the provided 'Input Output Examples'. FORMAT: input => output. OMIT the words 'input' and 'output'; use the arrow for separation. Include [] if input and output are arrays. SELECT examples that illustrate EDGE CASES and the MAIN CASE. if there is no one example that matches MAIN CASE and all the EDGE CASES you can provide MULTIPLE EXAMPLES selected from PROVIDED EXAMPLES. DO NOT provide explanations only I/O. DO NOT select I/O that DOES NOT cover additional unique cases.
 
 FOR THE SOLUTION:
-
-1. **Flashcard Sentence**: Write one short sentence that would be useful as the answer for this flashcard. Make sure it is useful in describing the way to solve the problem and it can stand alone as the answer. keep it brief.
-2. **Problem Algorithm**: Classify the problem based on the primary algorithm like "Dynamic Programming", "DFS", "BFS", "Recursion", "Two pointers" etc. Or more complicated algorithms if applicable you can use specific names like quicksort.
-3. **Problem Datastructure**: Clasify the primary datastructure, then state the tags related to other data structures or algorithms that are also relevant (e.g., "Graphs", "Trees" )
-4. **Algo/Datastructure**: Give the algorithm used to solve the problem in primary solution a DESCRIPTIVE ALIAS label is as "Alias:". This will be the name for the specific algorithm used in the solution not alias for the generic algorithm used above. This name SHOULD be VERY SPECIFIC and DESCRIPTIVE it SHOULD DESCRIBE the process well enough to give understanding of what is going on in the algorithm. The alias SHOULD NOT describe the problem but instead it SHOULD ALIAS the algorithm used in the solution. For example if you were naming algorithm for Product of Array Except Self - Leetcode 238. You could call it prefix - postfix. Add a dash (-) as a separator. Then Combine the two previous answer but only keep the most useful information. So this section should contain 2 algorithm names. One generic one very specific and descriptive to the problem.
-5. **Key Intuition**: Note down the main idea or intuition needed to solve the problem, without going into the specifics of the implementation. If you provide code provide it in js.
-6. **Pseudocode/Algorithm Steps**: Include high-level steps or pseudocode explaining how to approach the problem. This avoids direct coding but provides a roadmap.
-7. **Edge Cases**: List common or tricky edge cases that are vital to handle to pass all the test cases.
-8. **Comparative Analysis**: Note how this problem's approach differs from similar problems. This can include variations in the algorithm or additional constraints.
-9. **Common Mistakes**: Mention typical mistakes or misconceptions that could lead to incorrect solutions or failed submissions.
-10. **Primary Solution Code**: Select the best solution from the provided solutions above. DO NOT provide new code just use the PROVIDED CODE in  the "Solutions:" SECTION. Guilde your selections based on the following criteria. 1. SELECT JAVASCRIPT solution CODE ONLY 2. Select soltuions that would DO WELL on an INTERVIEW and follows all instructions in the problem. Put "Extra Credit" Solutios as the primary code. AVOID solutions with n^2 time complexity if other solutions exist 3. higher order functions if available 4. Big O time comlexity. If lower time complexity complicates the solution select it as SECONDARY SOLUTION. 5. Clarity 6. Comments, especially pay attention to comments specifying if the time complexity is incorrect. IGNORE comments criticizing the solutions if they are incorrect. 7. Prefer solutions with lower index. This section will EXTRACT the CODE from the SELECTED SOLUTION. Use the code provided and DO NOT MAKE ANY CHANGES.
-11. **Enumerated Steps 1**: Describe the solution PROCESS in a step-by-step manner, focusing on MAIN CONCEPTS and excluding setup details. Use CONCISE yet PRECISE descriptions, and DO NOT OMIT difficult steps.
-12. **Solution 1**: Provide an DESCRIPTION of the solution, including ADDITIONAL DETAILS and CAVEATS not covered in the steps. If a solution contains additional math algorithm or some tricks EXPLAIN THE SOLUTION IN DETAIL. EXPLAIN HOW THE MATH ALGORITHM OR OTHER ALGORITHMS WORK. For harder algorithms PROVIDE EXTENSIVE EXPLANATION. Do so for Solution 2 as well.
-13. **Secondary Solution Code**: EXTRACT another CODE from the given solutions as the second best solution. Follow the same guidelines as in the first Solution Code. Use the PROVIDED CODE and DO NOT MAKE ANY CHANGES. Extract a solution that follows a DIFFERENT APPROACH from PRIMARY SOLUTION UNLESS it is clearly worse or incorret. ALWAYS EXTRACT secondary solution.
-14. **Enumerated Steps 2**: Describe the solution PROCESS in a step-by-step manner for the second solution.
-15. **Solution 2**: Provide an DESCRIPTION of the solution 2, including ADDITIONAL DETAILS and CAVEATS not covered in the steps.
-16. **Time Complexity**: Clearly state the TIME COMPLEXITY of the solution. Also state space complexity where applicable.
-17. **Selected Solutions**: OUTPUT AN ARRAY ex: [1, 3] representing the selected solutions. TWO solutions should always be SELECTED but the output should be in the FORM OF AN ARRAY WITH 2 VALUES.
-18. **Image Description**: Create a description for an image that will be used by another AI and is related to the problem. Make the description of the image VIVID and IMAGINATIVE it doesn't have to be exactly what the problem is about but it should have some relation to the problem. It is more important that the image is EASY to REMEMBER and pretty then that is describes the problem perfectly.
-
+1. **Problem Algorithm**: Classify the problem based on the primary algorithm like "Dynamic Programming", "DFS", "BFS", "Recursion", "Two pointers" etc. Or more complicated algorithms if applicable you can use specific names like quicksort.
+2. **Problem Datastructure**: Clasify the primary datastructure, then state the tags related to other data structures or algorithms that are also relevant (e.g., "Graphs", "Trees" )
+3. **Solution Trick**: PROVIDE the MAIN trick to solve the problem. Most problems include only a single trick. For some problems this is simply figuring out the algorithm. For others it is figuring out some other trick that will lead to the solution. For "hard" problems there might be more then one trick in which case provide an ENUMERATED list (SHOULD HAVE ONLY FEW ITEMS).
+Examples:
+Jump Gate - Trick: Start at the end of the array.
+Valid Perfect Square - Binary search between 1 and n
+Coin Change - Dynamic Programming Bottom Up
+Fibonacci Number - Track the last two values in a loop from 1 to n. Return the last value.
+Climbing Stairs - Recognize the Fibonacci pattern.
+Pacific Atlantic Water Flow - 1. BFS from both edges of the oceans. 2. Check for overlap.
+Walls and Gates - Start at gates and use BFS with a queue
+Two Sum II - 1. Binary search and two pointers. 2. Move left or right pointer based on if sum is larger or smaller
+Combination Sum - Recursive Backtracking.
+Number of Good Pairs - 1. Use a hashmap to store good pairs for each number. 2. Add the value to the total if found in the hashmap and increment it by one
+How Many Numbers Are Smaller Than the Current Number - Sort the array.
+4. **Key Intuition**: Note down the main idea or intuition needed to solve the problem, without going into the specifics of the implementation. If you provide code provide it in js.
+5. **Pseudocode/Algorithm Steps**: Include high-level steps or pseudocode explaining how to approach the problem. This avoids direct coding but provides a roadmap.
+6. **Edge Cases**: List common or tricky edge cases that are vital to handle to pass all the test cases.
+7. **Common Mistakes**: Mention typical mistakes or misconceptions that could lead to incorrect solutions or failed submissions.
+8. **Primary Solution Code**: Select the best solution from the provided solutions above. DO NOT provide new code just use the PROVIDED CODE in  the "Solutions:" SECTION. Guilde your selections based on the following criteria. 1. SELECT JAVASCRIPT solution CODE ONLY 2. Select soltuions that would DO WELL on an INTERVIEW and follows all instructions in the problem. Put "Extra Credit" Solutios as the primary code. AVOID solutions with n^2 time complexity if other solutions exist 3. higher order functions if available 4. Big O time comlexity. If lower time complexity complicates the solution select it as SECONDARY SOLUTION. 5. Clarity 6. Comments, especially pay attention to comments specifying if the time complexity is incorrect. IGNORE comments criticizing the solutions if they are incorrect. 7. Prefer solutions with lower index. This section will EXTRACT the CODE from the SELECTED SOLUTION. Use the code provided and DO NOT MAKE ANY CHANGES.
+9. **Enumerated Steps 1**: Describe the solution PROCESS in a step-by-step manner, focusing on MAIN CONCEPTS and EXCLUDING VARIABLE SETUP details. Use CONCISE yet PRECISE descriptions, and DO NOT OMIT difficult steps. Bold the Main Trick used in the steps.
+10. **Solution 1**: Provide an DESCRIPTION of the solution, including ADDITIONAL DETAILS and CAVEATS not covered in the steps. If a solution contains additional math algorithm or some tricks EXPLAIN THE SOLUTION IN DETAIL. EXPLAIN HOW THE MATH ALGORITHM OR OTHER ALGORITHMS WORK. For harder algorithms PROVIDE EXTENSIVE EXPLANATION. Do so for Solution 2 as well.
+11. **Secondary Solution Code**: EXTRACT another CODE from the given solutions as the second best solution. Follow the same guidelines as in the first Solution Code. Extract a solution that follows a DIFFERENT APPROACH from PRIMARY SOLUTION UNLESS it is clearly worse or incorret. ALWAYS EXTRACT secondary solution.
+12. **Enumerated Steps 2**: Describe the solution PROCESS in a step-by-step manner for the second solution.
+13. **Solution 2**: Provide an DESCRIPTION of the solution 2, including ADDITIONAL DETAILS and CAVEATS not covered in the steps.
+14. **Time Complexity**: Clearly state the TIME COMPLEXITY of the solution. Also state space complexity where applicable.
+15. **Selected Solutions**: OUTPUT AN ARRAY ex: [1, 3] representing the selected solutions. TWO solutions should always be SELECTED but the output should be in the FORM OF AN ARRAY WITH 2 VALUES.
+16. **Image Description**: Create a description for an image that will be used by another AI and is related to the problem. Make the description of the image VIVID and IMAGINATIVE it doesn't have to be exactly what the problem is about but it should have some relation to the problem. It is more important that the image is EASY to REMEMBER and pretty then that is describes the problem perfectly.

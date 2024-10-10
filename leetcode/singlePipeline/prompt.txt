@@ -1,0 +1,135 @@
+FOR THE ALTERNATIVE SOLUTION:
+1. **Alternative Code**: THIS IS THE MOST IMPORTANT STEP! DO NOT SKIP THIS STEP! GENERATE and ANALYZE CODE for an ALTERNATIVE SOLUTION. RUN and TEST this code on the Input/Output EXAMPLES provided below and make sure that the ALTERNATIVE SOLUTION WORKS on the provided EXAMPLES. PROVIDE the OUTPUTS from running the code. DO NOT JUST STATE that the provided solution is efficient. if the solution is already efficient PROVIDE ALTERNATIVE CODE that does the same thing. DO NOT GIVE TESTING EXAMPLES in the same CODEBLOCK AS the ALTERNATIVE SOLUTION. RUN THE TESTS SEPERATELY and GIVE OUTPUTS in a seperate codeblock or section. DO NOT PROVIDE THE EXPECTED OUTPUT. PROVIDE THE ACTUAL OUTPUT by RUNNING THE CODE.
+// - DO NOT PROVIDE TEST RESULTS or CODE OUTPUT inside the ALTERNATIVE CODE CODEBLOCK. INSTEAD use SEPARATE CODEBLOCK if you are going to PROVIDE RESULTS.
+// - DO NOT STATE - Alternative code implementation will be provided here ACTUALLY PROVIDE THE CODE. 
+// - DO NOT SKIP ANY SECTIONS BELOW.
+1. **Alternative Solution Outputs**: STATE WHETHER ALTERNATIVE SOLUTION OUTPUTS were CORRECT or incorrect. THEN PROVIDE THEM HERE.
+2. **Preferred Solution**: Select the BEST fit SOLUTION. In this section simply WRITE `provided solution` or `alternative solution` based on the solution you pick. DO NOT WRITE ANYTHING ELSE HERE. PREFER `provided` solution UNLESS the `alternative solution` is MORE efficient OR MORE readable WITH THE SAME TIME COMPLEXITY. PREFER higher order functions. 
+3. **Solution Choice Reason**: Provide the reason for why you chose the `Preferred Solution`.
+
+When approaching the following LeetCode problem, it is CRUCIAL to structure your response with CLEAR and DETAILED sections, EACH marked by a DISTINCT **Title**. Follow this step-by-step guide to ensure COMPREHENSIVENESS and CLARITY:
+Problem:
+```
+You are given a 0-indexed integer array nums and an integer k. Your task is to perform the following operation exactly k times in order to maximize your score:
+
+
+	Select an element m from nums.
+	Remove the selected element m from the array.
+	Add a new element with a value of m + 1 to the array.
+	Increase your score by m.
+
+
+Return the maximum score you can achieve after performing the operation exactly k times.
+
+&nbsp;
+Example 1:
+
+Input: nums = [1,2,3,4,5], k = 3
+Output: 18
+Explanation: We need to choose exactly 3 elements from nums to maximize the sum.
+For the first iteration, we choose 5. Then sum is 5 and nums = [1,2,3,4,6]
+For the second iteration, we choose 6. Then sum is 5 + 6 and nums = [1,2,3,4,7]
+For the third iteration, we choose 7. Then sum is 5 + 6 + 7 = 18 and nums = [1,2,3,4,8]
+So, we will return 18.
+It can be proven, that 18 is the maximum answer that we can achieve.
+
+
+Example 2:
+
+Input: nums = [5,5,5], k = 2
+Output: 11
+Explanation: We need to choose exactly 2 elements from nums to maximize the sum.
+For the first iteration, we choose 5. Then sum is 5 and nums = [5,5,6]
+For the second iteration, we choose 6. Then sum is 5 + 6 = 11 and nums = [5,5,7]
+So, we will return 11.
+It can be proven, that 11 is the maximum answer that we can achieve.
+
+
+&nbsp;
+Constraints:
+
+
+	1 &lt;= nums.length &lt;= 100
+	1 &lt;= nums[i] &lt;= 100
+	1 &lt;= k &lt;= 100
+
+
+&nbsp;
+.spoilerbutton {display:block; border:dashed; padding: 0px 0px; margin:10px 0px; font-size:150%; font-weight: bold; color:#000000; background-color:cyan; outline:0; 
+}
+.spoiler {overflow:hidden;}
+.spoiler > div {-webkit-transition: all 0s ease;-moz-transition: margin 0s ease;-o-transition: all 0s ease;transition: margin 0s ease;}
+.spoilerbutton[value="Show Message"] + .spoiler > div {margin-top:-500%;}
+.spoilerbutton[value="Hide Message"] + .spoiler {padding:5px;}
+```
+Extracted Solution:
+```
+Approach
+
+<img src="https://assets.leetcode.com/users/images/f54548fc-c439-428e-a5f9-dedb14591a37_1690517472.5807898.png" alt="Screenshot 2023-07-28 at 12.11.02.png" class="resize-img">
+Code
+/**
+ * @param {number[]} nums
+ * @param {number} k
+ * @return {number}
+ */
+var maximizeSum = function (nums, k) {
+  // Using Math.max for find max number
+  let max = Math.max(...nums);
+  // init sum
+  let sum = 0;
+  // we only need max number plus one until k
+  for (let i = 0; i &lt; k; i++) {
+    sum += max;
+    max += 1;
+  }
+  // yeah that's it finally return the sum
+  return sum;
+};
+
+Complexity
+
+Time complexity: O(n)
+
+
+
+Space complexity: O(1)
+```
+Input Output Examples:
+```
+Example 1:
+
+Input: nums = [1,2,3,4,5], k = 3
+Output: 18
+Explanation: We need to choose exactly 3 elements from nums to maximize the sum.
+For the first iteration, we choose 5. Then sum is 5 and nums = [1,2,3,4,6]
+For the second iteration, we choose 6. Then sum is 5 + 6 and nums = [1,2,3,4,7]
+For the third iteration, we choose 7. Then sum is 5 + 6 + 7 = 18 and nums = [1,2,3,4,8]
+So, we will return 18.
+It can be proven, that 18 is the maximum answer that we can achieve.
+
+
+Example 2:
+
+Input: nums = [5,5,5], k = 2
+Output: 11
+Explanation: We need to choose exactly 2 elements from nums to maximize the sum.
+For the first iteration, we choose 5. Then sum is 5 and nums = [5,5,6]
+For the second iteration, we choose 6. Then sum is 5 + 6 = 11 and nums = [5,5,7]
+So, we will return 11.
+It can be proven, that 11 is the maximum answer that we can achieve.
+```
+
+FOR THE QUESTION:
+1. **Summary**: Provide a CONCISE summary of the problem, focusing exclusively on the tasks to be accomplished. Begin directly with the action or task, using clear and brief language. aVOID INTRODUCTORY PHRASES like "The task is to" or "The challenge involves."
+2. **Description**: Offer a DETAILED explanation. Break down complex descriptions into NUMBERED LISTS for easier understanding. 
+3. **I/O**: Choose the MOST REPRESENTATIVE example from the provided 'Input Output Examples'. FORMAT: [input] => [output]. OMIT the words 'Input' and 'Output'; use the arrow for separation. SELECT examples that illustrate EDGE CASES and the MAIN CASE. if there is no one example that matches MAIN CASE and all the EDGE CASES you can provide MULTIPLE EXAMPLES selected from PROVIDED EXAMPLES.
+
+FOR THE SOLUTION:
+
+1. **Algo/Datastructure**: Clearly NAME the algorithm or main datastructure.
+2. **Code**: Extract the CODE from the given solution. Use the code provided and DO NOT MAKE ANY CHANGES.
+3. **Setup**: Extract the SETUP from the 'Extracted Solution' solution code. Present this as PARTIAL CODE in a CODEBLOCK, including FUNCTION HEADERS and initial VARIABLES setup that often happen before actual important processing happens. ADD comments for clarity to the code that setups the variables and functions if needed. Comments can contain example values unless the values are already present in the setup. example of VARIABLE SETUP would be `let count = 0` but also other VARIABLES that are setup before the actual logic. 
+4. **Enumerated Steps**: Describe the solution PROCESS in a step-by-step manner, focusing on MAIN CONCEPTS and excluding setup details. Use CONCISE yet PRECISE descriptions, and DO NOT OMIT difficult steps. If there are any IMAGES in the `Extracted Solution` section INCLUDE them as they are which means keep them as AN HTML TAG. The result should be a mix of PURE TEXT and HTML. 
+5. **Solution**: Provide an OVERVIEW of the solution, including ADDITIONAL DETAILS and CAVEATS not covered in the steps.
+6. **Time Complexity**: Clearly state the TIME COMPLEXITY of the solution.

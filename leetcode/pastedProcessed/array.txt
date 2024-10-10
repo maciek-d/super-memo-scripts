@@ -1,0 +1,1313 @@
+Title: 1920. Build Array from Permutation
+Q: "Given a zero-based permutation nums (0-indexed), build an array ans of the same length where ans[i] = nums[nums[i]] for each 0 <= i < nums.length and return it.
+
+A zero-based permutation nums is an array of distinct integers from 0 to nums.length - 1 (inclusive)."
+A: "var buildArray = function(nums) {
+    return nums.map(a=>nums[a]);
+};"
+Examples: "Example 1:
+
+Input: nums = [0,2,1,5,3,4]
+Output: [0,1,2,4,5,3]
+Explanation: The array ans is built as follows: 
+ans = [nums[nums[0]], nums[nums[1]], nums[nums[2]], nums[nums[3]], nums[nums[4]], nums[nums[5]]]
+    = [nums[0], nums[2], nums[1], nums[5], nums[3], nums[4]]
+    = [0,1,2,4,5,3]
+
+Example 2:
+
+Input: nums = [5,0,1,2,3,4]
+Output: [4,5,0,1,2,3]
+Explanation: The array ans is built as follows:
+ans = [nums[nums[0]], nums[nums[1]], nums[nums[2]], nums[nums[3]], nums[nums[4]], nums[nums[5]]]
+    = [nums[5], nums[0], nums[1], nums[2], nums[3], nums[4]]
+    = [4,5,0,1,2,3]"
+--
+
+Title: 1929. Concatenation of Array
+Q: "Given an integer array nums of length n, you want to create an array ans of length 2n where ans[i] == nums[i] and ans[i + n] == nums[i] for 0 <= i < n (0-indexed).
+
+Specifically, ans is the concatenation of two nums arrays.
+
+Return the array ans."
+A: "var getConcatenation = function(nums) {
+	//spread the nums array twice and return it
+    return [...nums,...nums]
+};"
+Examples: "Example 1:
+
+Input: nums = [1,2,1]
+Output: [1,2,1,1,2,1]
+Explanation: The array ans is formed as follows:
+- ans = [nums[0],nums[1],nums[2],nums[0],nums[1],nums[2]]
+- ans = [1,2,1,1,2,1]
+
+Example 2:
+
+Input: nums = [1,3,2,1]
+Output: [1,3,2,1,1,3,2,1]
+Explanation: The array ans is formed as follows:
+- ans = [nums[0],nums[1],nums[2],nums[3],nums[0],nums[1],nums[2],nums[3]]
+- ans = [1,3,2,1,1,3,2,1]"
+--
+
+Title: 1512. Number of Good Pairs
+Q: "Given an array of integers nums, return the number of good pairs.
+
+A pair (i, j) is called good if nums[i] == nums[j] and i < j."
+A: "// time O(N) space O(N)
+var numIdenticalPairs = function(nums) {
+    const map = {}
+    let count = 0
+    
+    for (const number of nums) {
+        if (map[number]) {
+            count += map[number];
+            map[number] += 1;
+        } else {
+            map[number] = 1;
+        }
+    }
+    return count
+};"
+Examples: "Example 1:
+
+Input: nums = [1,2,3,1,1,3]
+Output: 4
+Explanation: There are 4 good pairs (0,3), (0,4), (3,4), (2,5) 0-indexed.
+
+
+Example 2:
+
+Input: nums = [1,1,1,1]
+Output: 6
+Explanation: Each pair in the array are good.
+
+
+Example 3:
+
+Input: nums = [1,2,3]
+Output: 0"
+--
+
+Title: 1637. Widest Vertical Area Between Two Points Containing No Points
+Q: "Given n points on a 2D plane where points[i] = [xi, yi], Return the widest vertical area between two points such that no points are inside the area.
+
+A vertical area is an area of fixed-width extending infinitely along the y-axis (i.e., infinite height). The widest vertical area is the one with the maximum width.
+
+Note that points on the edge of a vertical area are not considered included in the area."
+A: "/**
+ * @param {number[][]} points
+ * @return {number}
+ */
+var maxWidthOfVerticalArea = function(points) {
+    points.sort((a,b) => a[0] - b[0]);
+    let max = 0;
+    for(let i=0; i<points.length-1; i++){
+        max = Math.max(max , points[i+1][0 ] - points[i][0]);
+    }
+    return max;
+};"
+Examples: "Example 1:
+
+​
+Input: points = [[8,7],[9,9],[7,4],[9,7]]
+Output: 1
+Explanation: Both the red and the blue area are optimal.
+
+
+Example 2:
+
+Input: points = [[3,1],[9,0],[1,0],[1,4],[5,3],[8,8]]
+Output: 3"
+--
+
+Title: 2011. Final Value of Variable After Performing Operations
+Q: "There is a programming language with only four operations and one variable X:
+
+++X and X++ increments the value of the variable X by 1.
+--X and X-- decrements the value of the variable X by 1.
+
+Initially, the value of X is 0.
+
+Given an array of strings operations containing a list of operations, return the final value of X after performing all the operations."
+A: "const finalValueAfterOperations = (operations) => operations.reduce((acc, curr) => curr[1] === "+" ? ++acc : --acc, 0)"
+Examples: "Example 1:
+
+Input: operations = ["--X","X++","X++"]
+Output: 1
+Explanation: The operations are performed as follows:
+Initially, X = 0.
+--X: X is decremented by 1, X =  0 - 1 = -1.
+X++: X is incremented by 1, X = -1 + 1 =  0.
+X++: X is incremented by 1, X =  0 + 1 =  1.
+
+
+Example 2:
+
+Input: operations = ["++X","++X","X++"]
+Output: 3
+Explanation: The operations are performed as follows:
+Initially, X = 0.
+++X: X is incremented by 1, X = 0 + 1 = 1.
+++X: X is incremented by 1, X = 1 + 1 = 2.
+X++: X is incremented by 1, X = 2 + 1 = 3.
+
+
+Example 3:
+
+Input: operations = ["X++","++X","--X","X--"]
+Output: 0
+Explanation: The operations are performed as follows:
+Initially, X = 0.
+X++: X is incremented by 1, X = 0 + 1 = 1.
+++X: X is incremented by 1, X = 1 + 1 = 2.
+--X: X is decremented by 1, X = 2 - 1 = 1.
+X--: X is decremented by 1, X = 1 - 1 = 0."
+--
+
+Title: 2433. Find The Original Array of Prefix Xor
+Q: "You are given an integer array pref of size n. Find and return the array arr of size n that satisfies:
+
+pref[i] = arr[0] ^ arr[1] ^ ... ^ arr[i].
+
+Note that ^ denotes the bitwise-xor operation.
+
+It can be proven that the answer is unique."
+A: "/**
+ * @param {number[]} pref
+ * @return {number[]}
+ */
+var findArray = function(pref) {
+let arr = [];
+arr[0] = pref[0];
+for(i=1;i<pref.length;i++){
+    arr[i] = pref[i] ^ pref[i-1]
+}
+return arr
+};"
+Examples: "Example 1:
+
+Input: pref = [5,2,0,3,1]
+Output: [5,7,2,3,2]
+Explanation: From the array [5,7,2,3,2] we have the following:
+- pref[0] = 5.
+- pref[1] = 5 ^ 7 = 2.
+- pref[2] = 5 ^ 7 ^ 2 = 0.
+- pref[3] = 5 ^ 7 ^ 2 ^ 3 = 3.
+- pref[4] = 5 ^ 7 ^ 2 ^ 3 ^ 2 = 1.
+
+
+Example 2:
+
+Input: pref = [13]
+Output: [13]
+Explanation: We have pref[0] = arr[0] = 13."
+--
+
+Title: 1470. Shuffle the Array
+Q: "Given the array nums consisting of 2n elements in the form [x1,x2,...,xn,y1,y2,...,yn].
+
+Return the array in the form [x1,y1,x2,y2,...,xn,yn]."
+A: "/**
+ * @param {number[]} nums
+ * @param {number} n
+ * @return {number[]}
+ */
+var shuffle = function(nums, n) {
+    let i = n - 1
+    for (let j = nums.length - 1; j >= n; j--) {
+        nums[j] <<= 10
+        nums[j] |= nums[i]
+        i--
+    }
+    
+    i = 0
+    for (let j = n; j < nums.length; j++) {
+        const num1 = nums[j] & 1023
+        const num2 = nums[j] >> 10
+        nums[i] = num1
+        nums[i + 1] = num2
+        i += 2    
+    }
+    
+    return nums
+};"
+Examples: "Example 1:
+
+Input: nums = [2,5,1,3,4,7], n = 3
+Output: [2,3,5,4,1,7] 
+Explanation: Since x1=2, x2=5, x3=1, y1=3, y2=4, y3=7 then the answer is [2,3,5,4,1,7].
+
+
+Example 2:
+
+Input: nums = [1,2,3,4,4,3,2,1], n = 4
+Output: [1,4,2,3,3,2,4,1]
+
+
+Example 3:
+
+Input: nums = [1,1,2,2], n = 2
+Output: [1,2,1,2]"
+--
+
+Title: 1476. Subrectangle Queries
+Q: "Implement the class SubrectangleQueries which receives a rows x cols rectangle as a matrix of integers in the constructor and supports two methods:
+
+1. updateSubrectangle(int row1, int col1, int row2, int col2, int newValue)
+
+Updates all values with newValue in the subrectangle whose upper left coordinate is (row1,col1) and bottom right coordinate is (row2,col2).
+
+2. getValue(int row, int col)
+
+Returns the current value of the coordinate (row,col) from the rectangle."
+A: "/**
+ * @param {number[][]} rectangle
+ */
+var SubrectangleQueries = function(rectangle) {
+    this.rec = [...rectangle]
+};
+
+/** 
+ * @param {number} row1 
+ * @param {number} col1 
+ * @param {number} row2 
+ * @param {number} col2 
+ * @param {number} newValue
+ * @return {void}
+ */
+SubrectangleQueries.prototype.updateSubrectangle = function(row1, col1, row2, col2, newValue) {
+     for(let i=row1;i<=row2;i++){
+        for(let j=col1;j<=col2;j++){
+            this.rec[i][j] = newValue
+        }
+    }   
+};
+
+/** 
+ * @param {number} row 
+ * @param {number} col
+ * @return {number}
+ */
+SubrectangleQueries.prototype.getValue = function(row, col) {
+    return this.rec[row][col]
+};
+
+/** 
+ * Your SubrectangleQueries object will be instantiated and called as such:
+ * var obj = new SubrectangleQueries(rectangle)
+ * obj.updateSubrectangle(row1,col1,row2,col2,newValue)
+ * var param_2 = obj.getValue(row,col)
+ */"
+Examples: "Example 1:
+
+Input
+["SubrectangleQueries","getValue","updateSubrectangle","getValue","getValue","updateSubrectangle","getValue","getValue"]
+[[[[1,2,1],[4,3,4],[3,2,1],[1,1,1]]],[0,2],[0,0,3,2,5],[0,2],[3,1],[3,0,3,2,10],[3,1],[0,2]]
+Output
+[null,1,null,5,5,null,10,5]
+Explanation
+SubrectangleQueries subrectangleQueries = new SubrectangleQueries([[1,2,1],[4,3,4],[3,2,1],[1,1,1]]);  
+// The initial rectangle (4x3) looks like:
+// 1 2 1
+// 4 3 4
+// 3 2 1
+// 1 1 1
+subrectangleQueries.getValue(0, 2); // return 1
+subrectangleQueries.updateSubrectangle(0, 0, 3, 2, 5);
+// After this update the rectangle looks like:
+// 5 5 5
+// 5 5 5
+// 5 5 5
+// 5 5 5 
+subrectangleQueries.getValue(0, 2); // return 5
+subrectangleQueries.getValue(3, 1); // return 5
+subrectangleQueries.updateSubrectangle(3, 0, 3, 2, 10);
+// After this update the rectangle looks like:
+// 5   5   5
+// 5   5   5
+// 5   5   5
+// 10  10  10 
+subrectangleQueries.getValue(3, 1); // return 10
+subrectangleQueries.getValue(0, 2); // return 5
+
+
+Example 2:
+
+Input
+["SubrectangleQueries","getValue","updateSubrectangle","getValue","getValue","updateSubrectangle","getValue"]
+[[[[1,1,1],[2,2,2],[3,3,3]]],[0,0],[0,0,2,2,100],[0,0],[2,2],[1,1,2,2,20],[2,2]]
+Output
+[null,1,null,100,100,null,20]
+Explanation
+SubrectangleQueries subrectangleQueries = new SubrectangleQueries([[1,1,1],[2,2,2],[3,3,3]]);
+subrectangleQueries.getValue(0, 0); // return 1
+subrectangleQueries.updateSubrectangle(0, 0, 2, 2, 100);
+subrectangleQueries.getValue(0, 0); // return 100
+subrectangleQueries.getValue(2, 2); // return 100
+subrectangleQueries.updateSubrectangle(1, 1, 2, 2, 20);
+subrectangleQueries.getValue(2, 2); // return 20"
+--
+
+Title: 2942. Find Words Containing Character
+Q: "You are given a 0-indexed array of strings words and a character x.
+
+Return an array of indices representing the words that contain the character x.
+
+Note that the returned array may be in any order."
+A: "/**
+ * @param {string[]} words
+ * @param {character} x
+ * @return {number[]}
+ */
+var findWordsContaining = function(words, x) {
+    return words.reduce((acc, curr, i) => curr.indexOf(x) > -1 ? [...acc, i]: acc, [])
+};"
+Examples: "Example 1:
+
+Input: words = ["leet","code"], x = "e"
+Output: [0,1]
+Explanation: "e" occurs in both words: "leet", and "code". Hence, we return indices 0 and 1.
+
+
+Example 2:
+
+Input: words = ["abc","bcd","aaaa","cbc"], x = "a"
+Output: [0,2]
+Explanation: "a" occurs in "abc", and "aaaa". Hence, we return indices 0 and 2.
+
+
+Example 3:
+
+Input: words = ["abc","bcd","aaaa","cbc"], x = "z"
+Output: []
+Explanation: "z" does not occur in any of the words. Hence, we return an empty array."
+--
+
+Title: 1282. Group the People Given the Group Size They Belong To
+Q: "There are n people that are split into some unknown number of groups. Each person is labeled with a unique ID from 0 to n - 1.
+
+You are given an integer array groupSizes, where groupSizes[i] is the size of the group that person i is in. For example, if groupSizes[1] = 3, then person 1 must be in a group of size 3.
+
+Return a list of groups such that each person i is in a group of size groupSizes[i].
+
+Each person should appear in exactly one group, and every person must be in a group. If there are multiple answers, return any of them. It is guaranteed that there will be at least one valid solution for the given input."
+A: "var groupThePeople = function(group) {
+  const result = []
+  const hash = {}
+    
+  for (let i = 0; i < group.length; i++) {
+    const num = group[i]
+    
+    if (hash[num]) {
+      hash[num].push(i)
+    } else {
+      hash[num] = [i]
+    }
+    
+    if (hash[num].length === num) {
+      result.push(hash[num])
+      delete hash[num]
+    }
+  }
+    
+  return result
+};"
+Examples: "Example 1:
+
+Input: groupSizes = [3,3,3,3,3,1,3]
+Output: [[5],[0,1,2],[3,4,6]]
+Explanation: 
+The first group is [5]. The size is 1, and groupSizes[5] = 1.
+The second group is [0,1,2]. The size is 3, and groupSizes[0] = groupSizes[1] = groupSizes[2] = 3.
+The third group is [3,4,6]. The size is 3, and groupSizes[3] = groupSizes[4] = groupSizes[6] = 3.
+Other possible solutions are [[2,1,6],[5],[0,4,3]] and [[5],[0,6,2],[4,3,1]].
+
+
+Example 2:
+
+Input: groupSizes = [2,1,3,3,3,2]
+Output: [[1],[0,5],[2,3,4]]"
+--
+
+Title: 1672. Richest Customer Wealth
+Q: "You are given an m x n integer grid accounts where accounts[i][j] is the amount of money the i​​​​​​​​​​​th​​​​ customer has in the j​​​​​​​​​​​th​​​​ bank. Return the wealth that the richest customer has.
+
+A customer's wealth is the amount of money they have in all their bank accounts. The richest customer is the customer that has the maximum wealth."
+A: "return Math.max(...accounts.map(customer=>customer.reduce((a,b)=>a+b)));"
+Examples: "Example 1:
+
+Input: accounts = [[1,2,3],[3,2,1]]
+Output: 6
+Explanation:
+1st customer has wealth = 1 + 2 + 3 = 6
+2nd customer has wealth = 3 + 2 + 1 = 6
+Both customers are considered the richest with a wealth of 6 each, so return 6.
+
+
+Example 2:
+
+Input: accounts = [[1,5],[7,3],[3,5]]
+Output: 10
+Explanation: 
+1st customer has wealth = 6
+2nd customer has wealth = 10 
+3rd customer has wealth = 8
+The 2nd customer is the richest with a wealth of 10.
+
+Example 3:
+
+Input: accounts = [[2,8,7],[7,1,3],[1,9,5]]
+Output: 17"
+--
+
+Title: 2798. Number of Employees Who Met the Target
+Q: "There are n employees in a company, numbered from 0 to n - 1. Each employee i has worked for hours[i] hours in the company.
+
+The company requires each employee to work for at least target hours.
+
+You are given a 0-indexed array of non-negative integers hours of length n and a non-negative integer target.
+
+Return the integer denoting the number of employees who worked at least target hours."
+A: "/**
+ * @param {number[]} hours
+ * @param {number} target
+ * @return {number}
+ */
+var numberOfEmployeesWhoMetTarget = function(hours, target) {
+    let count = 0;
+    for(let i=0; i<hours.length; i++) {
+        if(hours[i] >= target) count++;
+    }
+    return count;
+};"
+Examples: "Example 1:
+
+Input: hours = [0,1,2,3,4], target = 2
+Output: 3
+Explanation: The company wants each employee to work for at least 2 hours.
+- Employee 0 worked for 0 hours and didn't meet the target.
+- Employee 1 worked for 1 hours and didn't meet the target.
+- Employee 2 worked for 2 hours and met the target.
+- Employee 3 worked for 3 hours and met the target.
+- Employee 4 worked for 4 hours and met the target.
+There are 3 employees who met the target.
+
+
+Example 2:
+
+Input: hours = [5,1,4,2,2], target = 6
+Output: 0
+Explanation: The company wants each employee to work for at least 6 hours.
+There are 0 employees who met the target."
+--
+
+Title: 1431. Kids With the Greatest Number of Candies
+Q: "There are n kids with candies. You are given an integer array candies, where each candies[i] represents the number of candies the ith kid has, and an integer extraCandies, denoting the number of extra candies that you have.
+
+Return a boolean array result of length n, where result[i] is true if, after giving the ith kid all the extraCandies, they will have the greatest number of candies among all the kids, or false otherwise.
+
+Note that multiple kids can have the greatest number of candies."
+A: "const kidsWithCandies = (candies, extraCandies, max = Math.max(...candies)) => candies.map(candy => candy + extraCandies >= max);"
+Examples: "Example 1:
+
+Input: candies = [2,3,5,1,3], extraCandies = 3
+Output: [true,true,true,false,true] 
+Explanation: If you give all extraCandies to:
+- Kid 1, they will have 2 + 3 = 5 candies, which is the greatest among the kids.
+- Kid 2, they will have 3 + 3 = 6 candies, which is the greatest among the kids.
+- Kid 3, they will have 5 + 3 = 8 candies, which is the greatest among the kids.
+- Kid 4, they will have 1 + 3 = 4 candies, which is not the greatest among the kids.
+- Kid 5, they will have 3 + 3 = 6 candies, which is the greatest among the kids.
+
+
+Example 2:
+
+Input: candies = [4,2,1,1,2], extraCandies = 1
+Output: [true,false,false,false,false] 
+Explanation: There is only 1 extra candy.
+Kid 1 will always have the greatest number of candies, even if a different kid is given the extra candy.
+
+
+Example 3:
+
+Input: candies = [12,1,12], extraCandies = 10
+Output: [true,false,true]"
+--
+
+Title: 2824. Count Pairs Whose Sum is Less than Target
+Q: "Given a 0-indexed integer array nums of length n and an integer target, return the number of pairs (i, j) where 0 <= i < j < n and nums[i] + nums[j] < target."
+A: "/**
+ * @param {number[]} nums
+ * @param {number} target
+ * @return {number}
+ */
+var countPairs = function(nums, target) {
+      let count = 0;
+
+      for (let i = 0; i < nums.length; i++) {
+        for (let j = i + 1; j < nums.length; j++) {
+          if (i < j && nums[i] + nums[j] < target) {
+            count++;
+          }
+        }
+      }
+
+      return count;
+};"
+Examples: "Example 1:
+
+Input: nums = [-1,1,2,3,1], target = 2
+Output: 3
+Explanation: There are 3 pairs of indices that satisfy the conditions in the statement:
+- (0, 1) since 0 < 1 and nums[0] + nums[1] = 0 < target
+- (0, 2) since 0 < 2 and nums[0] + nums[2] = 1 < target 
+- (0, 4) since 0 < 4 and nums[0] + nums[4] = 0 < target
+Note that (0, 3) is not counted since nums[0] + nums[3] is not strictly less than the target.
+
+
+Example 2:
+
+Input: nums = [-6,2,5,-2,-7,-1,3], target = -2
+Output: 10
+Explanation: There are 10 pairs of indices that satisfy the conditions in the statement:
+- (0, 1) since 0 < 1 and nums[0] + nums[1] = -4 < target
+- (0, 3) since 0 < 3 and nums[0] + nums[3] = -8 < target
+- (0, 4) since 0 < 4 and nums[0] + nums[4] = -13 < target
+- (0, 5) since 0 < 5 and nums[0] + nums[5] = -7 < target
+- (0, 6) since 0 < 6 and nums[0] + nums[6] = -3 < target
+- (1, 4) since 1 < 4 and nums[1] + nums[4] = -5 < target
+- (3, 4) since 3 < 4 and nums[3] + nums[4] = -9 < target
+- (3, 5) since 3 < 5 and nums[3] + nums[5] = -3 < target
+- (4, 5) since 4 < 5 and nums[4] + nums[5] = -8 < target
+- (4, 6) since 4 < 6 and nums[4] + nums[6] = -4 < target"
+--
+
+Title: 1480. Running Sum of 1d Array
+Q: "Given an array nums. We define a running sum of an array as runningSum[i] = sum(nums[0]…nums[i]).
+
+Return the running sum of nums."
+A: "const runningSum = nums => {
+    nums.reduce((a,c,i,arr) => arr[i] += a)
+    return nums
+}"
+Examples: "Example 1:
+
+Input: nums = [1,2,3,4]
+Output: [1,3,6,10]
+Explanation: Running sum is obtained as follows: [1, 1+2, 1+2+3, 1+2+3+4].
+
+Example 2:
+
+Input: nums = [1,1,1,1,1]
+Output: [1,2,3,4,5]
+Explanation: Running sum is obtained as follows: [1, 1+1, 1+1+1, 1+1+1+1, 1+1+1+1+1].
+
+Example 3:
+
+Input: nums = [3,1,2,10,1]
+Output: [3,4,6,16,17]"
+--
+
+Title: 1365. How Many Numbers Are Smaller Than the Current Number
+Q: "Given the array nums, for each nums[i] find out how many numbers in the array are smaller than it. That is, for each nums[i] you have to count the number of valid j's such that j != i and nums[j] < nums[i].
+
+Return the answer in an array."
+A: "/**
+ * @param {number[]} nums
+ * @return {number[]}
+ */
+var smallerNumbersThanCurrent = function(nums) {
+    const sorted = [...nums].sort((a, b) => a - b);
+    return nums.map(num => sorted.indexOf(num));
+};"
+Examples: "Example 1:
+
+Input: nums = [8,1,2,2,3]
+Output: [4,0,1,1,3]
+Explanation: 
+For nums[0]=8 there exist four smaller numbers than it (1, 2, 2 and 3). 
+For nums[1]=1 does not exist any smaller number than it.
+For nums[2]=2 there exist one smaller number than it (1). 
+For nums[3]=2 there exist one smaller number than it (1). 
+For nums[4]=3 there exist three smaller numbers than it (1, 2 and 2).
+
+
+Example 2:
+
+Input: nums = [6,5,4,8]
+Output: [2,1,0,3]
+
+
+Example 3:
+
+Input: nums = [7,7,7,7]
+Output: [0,0,0,0]"
+--
+Title: 2114. Maximum Number of Words Found in Sentences
+Q: "A sentence is a list of words that are separated by a single space with no leading or trailing spaces.
+
+You are given an array of strings sentences, where each sentences[i] represents a single sentence.
+
+Return the maximum number of words that appear in a single sentence."
+A: "/**
+ * @param {string[]} sentences
+ * @return {number}
+ */
+var mostWordsFound = function(sentences) {
+    let max = 0;
+    let temp = 0;
+    for (let i = 0; i < sentences.length; i++) {
+        temp = sentences[i].split(" ").length;
+        if (temp > max) {
+            max = temp;
+        }
+    }
+    
+    return max;
+};"
+Examples: "Example 1:
+
+Input: sentences = ["alice and bob love leetcode", "i think so too", "this is great thanks very much"]
+Output: 6
+Explanation: 
+- The first sentence, "alice and bob love leetcode", has 5 words in total.
+- The second sentence, "i think so too", has 4 words in total.
+- The third sentence, "this is great thanks very much", has 6 words in total.
+Thus, the maximum number of words in a single sentence comes from the third sentence, which has 6 words.
+
+
+Example 2:
+
+Input: sentences = ["please wait", "continue to fight", "continue to win"]
+Output: 3
+Explanation: It is possible that multiple sentences contain the same number of words. 
+In this example, the second and third sentences (underlined) have the same number of words."
+--
+
+Title: 1828. Queries on Number of Points Inside a Circle
+Q: "You are given an array points where points[i] = [xi, yi] is the coordinates of the ith point on a 2D plane. Multiple points can have the same coordinates.
+
+You are also given an array queries where queries[j] = [xj, yj, rj] describes a circle centered at (xj, yj) with a radius of rj.
+
+For each query queries[j], compute the number of points inside the jth circle. Points on the border of the circle are considered inside.
+
+Return an array answer, where answer[j] is the answer to the jth query."
+A: "const countPoints = function(points, queries) {
+    let result = [];
+    
+    for (let [x,y,radius] of queries) {
+        let count = 0;
+        for (let [a,b] of points) {
+            count += (x- a) * (x- a) + (y-b) * (y-b) <= radius*radius ? 1 : 0;
+        }
+        result.push(count)
+    }
+    return result;
+}"
+Examples: "Example 1:
+
+Input: points = [[1,3],[3,3],[5,3],[2,2]], queries = [[2,3,1],[4,3,1],[1,1,2]]
+Output: [3,2,2]
+Explanation: The points and circles are shown above.
+queries[0] is the green circle, queries[1] is the red circle, and queries[2] is the blue circle.
+
+
+Example 2:
+
+Input: points = [[1,1],[2,2],[3,3],[4,4],[5,5]], queries = [[1,2,2],[2,2,2],[4,3,2],[4,3,3]]
+Output: [2,3,2,4]
+Explanation: The points and circles are shown above.
+queries[0] is green, queries[1] is red, queries[2] is blue, and queries[3] is purple."
+--
+
+Title: 2391. Minimum Amount of Time to Collect Garbage
+Q: "You are given a 0-indexed array of strings garbage where garbage[i] represents the assortment of garbage at the ith house. garbage[i] consists only of the characters 'M', 'P' and 'G' representing one unit of metal, paper and glass garbage respectively. Picking up one unit of any type of garbage takes 1 minute.
+
+You are also given a 0-indexed integer array travel where travel[i] is the number of minutes needed to go from house i to house i + 1.
+
+There are three garbage trucks in the city, each responsible for picking up one type of garbage. Each garbage truck starts at house 0 and must visit each house in order; however, they do not need to visit every house.
+
+Only one garbage truck may be used at any given moment. While one truck is driving or picking up garbage, the other two trucks cannot do anything.
+
+Return the minimum number of minutes needed to pick up all the garbage."
+A: "const garbageCollection = (garbage, travel) => {
+  let travelTime = 0
+  garbage = garbage.reverse()
+  
+  for (const type of ['G', 'P', 'M']) {
+    const lastHouseWithGarbage = garbage.findIndex(house => house.includes(type))
+    
+    if (lastHouseWithGarbage === -1) {
+      continue
+    }
+
+    travelTime += travel.slice(0, garbage.length - lastHouseWithGarbage - 1).reduce((acc, num) => acc + num, 0)
+  }
+
+  return garbage.join('').length + travelTime
+}"
+Examples: "Example 1:
+
+Input: garbage = ["G","P","GP","GG"], travel = [2,4,3]
+Output: 21
+Explanation:
+The paper garbage truck:
+1. Travels from house 0 to house 1
+2. Collects the paper garbage at house 1
+3. Travels from house 1 to house 2
+4. Collects the paper garbage at house 2
+Altogether, it takes 8 minutes to pick up all the paper garbage.
+The glass garbage truck:
+1. Collects the glass garbage at house 0
+2. Travels from house 0 to house 1
+3. Travels from house 1 to house 2
+4. Collects the glass garbage at house 2
+5. Travels from house 2 to house 3
+6. Collects the glass garbage at house 3
+Altogether, it takes 13 minutes to pick up all the glass garbage.
+Since there is no metal garbage, we do not need to consider the metal garbage truck.
+Therefore, it takes a total of 8 + 13 = 21 minutes to collect all the garbage.
+
+
+Example 2:
+
+Input: garbage = ["MMM","PGM","GP"], travel = [3,10]
+Output: 37
+Explanation:
+The metal garbage truck takes 7 minutes to pick up all the metal garbage.
+The paper garbage truck takes 15 minutes to pick up all the paper garbage.
+The glass garbage truck takes 15 minutes to pick up all the glass garbage.
+It takes a total of 7 + 15 + 15 = 37 minutes to collect all the garbage."
+--
+
+Title: 2859. Sum of Values at Indices With K Set Bits
+Q: "You are given a 0-indexed integer array nums and an integer k.
+
+Return an integer that denotes the sum of elements in nums whose corresponding indices have exactly k set bits in their binary representation.
+
+The set bits in an integer are the 1's present when it is written in binary.
+
+For example, the binary representation of 21 is 10101, which has 3 set bits."
+A: "var sumIndicesWithKSetBits = function (a, k) {
+  let n = a.length
+
+  let sum = 0
+  for (let i = 0; i < n; i++) {
+    let iBnryStrWoZ = i
+      .toString(2) // binary
+      .replaceAll('0', '') // without 0s
+    if (iBnryStrWoZ.length === k) {
+      sum += a[i]
+    }
+  }
+  return sum
+}"
+Examples: "Example 1:
+
+Input: nums = [5,10,1,5,2], k = 1
+Output: 13
+Explanation: The binary representation of the indices are: 
+0 = 0002
+1 = 0012
+2 = 0102
+3 = 0112
+4 = 1002 
+Indices 1, 2, and 4 have k = 1 set bits in their binary representation.
+Hence, the answer is nums[1] + nums[2] + nums[4] = 13.
+
+Example 2:
+
+Input: nums = [4,3,2,1], k = 2
+Output: 1
+Explanation: The binary representation of the indices are:
+0 = 002
+1 = 012
+2 = 102
+3 = 112
+Only index 3 has k = 2 set bits in its binary representation.
+Hence, the answer is nums[3] = 1."
+--
+
+Title: 807. Max Increase to Keep City Skyline
+Q: "There is a city composed of n x n blocks, where each block contains a single building shaped like a vertical square prism. You are given a 0-indexed n x n integer matrix grid where grid[r][c] represents the height of the building located in the block at row r and column c.
+
+A city's skyline is the outer contour formed by all the building when viewing the side of the city from a distance. The skyline from each cardinal direction north, east, south, and west may be different.
+
+We are allowed to increase the height of any number of buildings by any amount (the amount can be different per building). The height of a 0-height building can also be increased. However, increasing the height of a building should not affect the city's skyline from any cardinal direction.
+
+Return the maximum total sum that the height of the buildings can be increased by without changing the city's skyline from any cardinal direction."
+A: ""
+Examples: "Example 1:
+
+Input: grid = [[3,0,8,4],[2,4,5,7],[9,2,6,3],[0,3,1,0]]
+Output: 35
+Explanation: The building heights are shown in the center of the above image.
+The skylines when viewed from each cardinal direction are drawn in red.
+The grid after increasing the height of buildings without affecting skylines is:
+gridNew = [ [8, 4, 8, 7],
+            [7, 4, 7, 7],
+            [9, 4, 8, 7],
+            [3, 3, 3, 3] ]
+
+
+Example 2:
+
+Input: grid = [[0,0,0],[0,0,0],[0,0,0]]
+Output: 0
+Explanation: Increasing the height of any building will result in the skyline changing."
+--
+
+Title: 1720. Decode XORed Array
+Q: "There is a hidden integer array arr that consists of n non-negative integers.
+
+It was encoded into another integer array encoded of length n - 1, such that encoded[i] = arr[i] XOR arr[i + 1]. For example, if arr = [1,0,2,1], then encoded = [1,2,3].
+
+You are given the encoded array. You are also given an integer first, that is the first element of arr, i.e. arr[0].
+
+Return the original array arr. It can be proved that the answer exists and is unique."
+A: "const decode = (encoded, first) => {
+    const out = [first]
+    encoded.forEach((x, i) => out.push(out[i] ^ x))
+    return out
+}"
+Examples: "Example 1:
+
+Input: encoded = [1,2,3], first = 1
+Output: [1,0,2,1]
+Explanation: If arr = [1,0,2,1], then first = 1 and encoded = [1 XOR 0, 0 XOR 2, 2 XOR 1] = [1,2,3]
+
+
+Example 2:
+
+Input: encoded = [6,2,7,3], first = 4
+Output: [4,2,0,7,4]"
+--
+
+Title: 2574. Left and Right Sum Differences
+Q: "Given a 0-indexed integer array nums, find a 0-indexed integer array answer where:
+
+answer.length == nums.length.
+answer[i] = |leftSum[i] - rightSum[i]|.
+
+Where:
+
+leftSum[i] is the sum of elements to the left of the index i in the array nums. If there is no such element, leftSum[i] = 0.
+rightSum[i] is the sum of elements to the right of the index i in the array nums. If there is no such element, rightSum[i] = 0.
+
+Return the array answer."
+A: ""
+Examples: "Example 1:
+
+Input: nums = [10,4,8,3]
+Output: [15,1,11,22]
+Explanation: The array leftSum is [0,10,14,22] and the array rightSum is [15,11,3,0].
+The array answer is [|0 - 15|,|10 - 11|,|14 - 3|,|22 - 0|] = [15,1,11,22].
+
+
+Example 2:
+
+Input: nums = [1]
+Output: [0]
+Explanation: The array leftSum is [0] and the array rightSum is [0].
+The array answer is [|0 - 0|] = [0]."
+--
+
+Title: 1389. Create Target Array in the Given Order
+Q: "Given two arrays of integers nums and index. Your task is to create target array under the following rules:
+
+Initially target array is empty.
+From left to right read nums[i] and index[i], insert at index index[i] the value nums[i] in target array.
+Repeat the previous step until there are no elements to read in nums and index.
+
+Return the target array.
+
+It is guaranteed that the insertion operations will be valid."
+A: "const createTargetArray = (nums, idxArr) => {
+    let target = [], max = -1
+    for(let i = 0; i < idxArr.length; i++){
+        if(idxArr[i] <= max){
+            for(let j = 0; j < i; j++){
+                if(idxArr[i] <= idxArr[j])idxArr[j]++
+                if(idxArr[j] > max)max = idxArr[j]
+            }            
+        }
+        max = Math.max(max, idxArr[i])
+    }
+    for(const i in nums)target[idxArr[i]] = nums[i]
+    return target
+};"
+Examples: "Example 1:
+
+Input: nums = [0,1,2,3,4], index = [0,1,2,2,1]
+Output: [0,4,1,3,2]
+Explanation:
+nums       index     target
+0            0        [0]
+1            1        [0,1]
+2            2        [0,1,2]
+3            2        [0,1,3,2]
+4            1        [0,4,1,3,2]
+
+
+Example 2:
+
+Input: nums = [1,2,3,4,0], index = [0,1,2,3,0]
+Output: [0,1,2,3,4]
+Explanation:
+nums       index     target
+1            0        [1]
+2            1        [1,2]
+3            2        [1,2,3]
+4            3        [1,2,3,4]
+0            0        [0,1,2,3,4]
+
+
+Example 3:
+
+Input: nums = [1], index = [0]
+Output: [1]"
+--
+
+Title: 1313. Decompress Run-Length Encoded List
+Q: "We are given a list nums of integers representing a list compressed with run-length encoding.
+
+Consider each adjacent pair of elements [freq, val] = [nums[2*i], nums[2*i+1]] (with i >= 0).  For each such pair, there are freq elements with value val concatenated in a sublist. Concatenate all the sublists from left to right to generate the decompressed list.
+
+Return the decompressed list."
+A: "var decompressRLElist = function(nums) {
+  const result = [];
+  
+  for (let i = 1; i < nums.length; i += 2) {
+    result.push(...new Array(nums[i - 1]).fill(nums[i]));
+  }
+  
+  return result;
+};"
+Examples: "Example 1:
+
+Input: nums = [1,2,3,4]
+Output: [2,4,4,4]
+Explanation: The first pair [1,2] means we have freq = 1 and val = 2 so we generate the array [2].
+The second pair [3,4] means we have freq = 3 and val = 4 so we generate [4,4,4].
+At the end the concatenation [2] + [4,4,4] is [2,4,4,4].
+
+
+Example 2:
+
+Input: nums = [1,1,2,3]
+Output: [1,3,3]"
+--
+
+Title: 1769. Minimum Number of Operations to Move All Balls to Each Box
+Q: "You have n boxes. You are given a binary string boxes of length n, where boxes[i] is '0' if the ith box is empty, and '1' if it contains one ball.
+
+In one operation, you can move one ball from a box to an adjacent box. Box i is adjacent to box j if abs(i - j) == 1. Note that after doing so, there may be more than one ball in some boxes.
+
+Return an array answer of size n, where answer[i] is the minimum number of operations needed to move all the balls to the ith box.
+
+Each answer[i] is calculated considering the initial state of the boxes."
+A: "function minOperations(boxes) {
+  const result = Array(boxes.length).fill(0);
+  
+  // First we make one pass through the array (left to right).
+  // For each index, we calculate the moves needed to get every
+  // non-empty box on the left of the current index to the current index.
+  
+  // At each i in boxes:
+  //   - add the running sum to result[i]
+  //   - increment the notEmpty box count if the current box is '1'
+  //   - add the previously seen notEmpty boxes (including current index) to the runningSum
+  
+  let notEmpty = 0;
+  let runningSum = 0;
+  
+  for (let i = 0; i < boxes.length; ++i) {
+    result[i] += runningSum;
+    if (boxes[i] === '1') ++notEmpty;
+    runningSum += notEmpty;
+  }
+  
+  // Make one more pass through the array (right to left).
+  // The operations are identical to the first loop, except that
+  // this pass calculates the moves needed to get every non-empty box
+  // on the right of each index to the current index.
+  
+  notEmpty = 0;
+  runningSum = 0;
+  
+  for (let i = boxes.length - 1; i >= 0; --i) {
+    result[i] += runningSum;
+    if (boxes[i] === '1') ++notEmpty;
+    runningSum += notEmpty;
+  }
+  
+  return result;
+}"
+Examples: "Example 1:
+
+Input: boxes = "110"
+Output: [1,1,3]
+Explanation: The answer for each box is as follows:
+1) First box: you will have to move one ball from the second box to the first box in one operation.
+2) Second box: you will have to move one ball from the first box to the second box in one operation.
+3) Third box: you will have to move one ball from the first box to the third box in two operations, and move one ball from the second box to the third box in one operation.
+
+
+Example 2:
+
+Input: boxes = "001011"
+Output: [11,8,5,4,3,4]"
+--
+
+Title: 654. Maximum Binary Tree
+Q: "You are given an integer array nums with no duplicates. A maximum binary tree can be built recursively from nums using the following algorithm:
+
+Create a root node whose value is the maximum value in nums.
+Recursively build the left subtree on the subarray prefix to the left of the maximum value.
+Recursively build the right subtree on the subarray suffix to the right of the maximum value.
+
+Return the maximum binary tree built from nums."
+A: "var constructMaximumBinaryTree = function(nums) {
+    if (nums.length === 0) return null;
+    let max = Math.max(...nums);
+    let index = nums.indexOf(max);
+    let head = new TreeNode(max);
+    head.left = constructMaximumBinaryTree(nums.slice(0, index));
+    head.right = constructMaximumBinaryTree(nums.slice(index + 1));
+    return head;
+};"
+Examples: "Example 1:
+
+Input: nums = [3,2,1,6,0,5]
+Output: [6,3,5,null,2,0,null,null,1]
+Explanation: The recursive calls are as follow:
+- The largest value in [3,2,1,6,0,5] is 6. Left prefix is [3,2,1] and right suffix is [0,5].
+    - The largest value in [3,2,1] is 3. Left prefix is [] and right suffix is [2,1].
+        - Empty array, so no child.
+        - The largest value in [2,1] is 2. Left prefix is [] and right suffix is [1].
+            - Empty array, so no child.
+            - Only one element, so child is a node with value 1.
+    - The largest value in [0,5] is 5. Left prefix is [0] and right suffix is [].
+        - Only one element, so child is a node with value 0.
+        - Empty array, so no child.
+
+
+Example 2:
+
+Input: nums = [3,2,1]
+Output: [3,null,2,null,1]"
+--
+
+Title: 1662. Check If Two String Arrays are Equivalent
+Q: "Given two string arrays word1 and word2, return true if the two arrays represent the same string, and false otherwise.
+
+A string is represented by an array if the array elements concatenated in order forms the string."
+A: "var arrayStringsAreEqual = function(word1, word2) {
+    return word1.join('') === word2.join('')
+};"
+Examples: "Example 1:
+
+Input: word1 = ["ab", "c"], word2 = ["a", "bc"]
+Output: true
+Explanation:
+word1 represents string "ab" + "c" -> "abc"
+word2 represents string "a" + "bc" -> "abc"
+The strings are the same, so return true.
+
+Example 2:
+
+Input: word1 = ["a", "cb"], word2 = ["ab", "c"]
+Output: false
+
+
+Example 3:
+
+Input: word1  = ["abc", "d", "defg"], word2 = ["abcddefg"]
+Output: true"
+--
+
+Title: 2482. Difference Between Ones and Zeros in Row and Column
+Q: "You are given a 0-indexed m x n binary matrix grid.
+
+A 0-indexed m x n difference matrix diff is created with the following procedure:
+
+Let the number of ones in the ith row be onesRowi.
+Let the number of ones in the jth column be onesColj.
+Let the number of zeros in the ith row be zerosRowi.
+Let the number of zeros in the jth column be zerosColj.
+diff[i][j] = onesRowi + onesColj - zerosRowi - zerosColj
+
+Return the difference matrix diff."
+A: "var onesMinusZeros = function (grid) {
+  for (let rowIndex = 0; rowIndex < grid.length; rowIndex++) {
+    for (
+      let columnIndex = 0;
+      columnIndex < grid[rowIndex].length;
+      columnIndex++
+    ) {
+      if (grid[rowIndex][columnIndex]) {
+        grid[rowIndex][columnIndex] = {
+          rowSum: {
+            0: 0,
+            1: 1,
+          },
+          columnSum: {
+            0: 0,
+            1: 1,
+          },
+        }
+      } else {
+        grid[rowIndex][columnIndex] = {
+          rowSum: {
+            0: 1,
+            1: 0,
+          },
+          columnSum: {
+            0: 1,
+            1: 0,
+          },
+        }
+      }
+    }
+  }
+
+  for (let rowIndex = 0; rowIndex < grid.length; rowIndex++) {
+    for (
+      let columnIndex = 0;
+      columnIndex < grid[rowIndex].length;
+      columnIndex++
+    ) {
+      if (grid[rowIndex - 1] && grid[rowIndex - 1][columnIndex]) {
+        grid[rowIndex][columnIndex].rowSum['0'] +=
+          grid[rowIndex - 1][columnIndex].rowSum['0']
+        grid[rowIndex][columnIndex].rowSum['1'] +=
+          grid[rowIndex - 1][columnIndex].rowSum['1']
+      }
+      if (grid[rowIndex][columnIndex - 1]) {
+        grid[rowIndex][columnIndex].columnSum['0'] +=
+          grid[rowIndex][columnIndex - 1].columnSum['0']
+        grid[rowIndex][columnIndex].columnSum['1'] +=
+          grid[rowIndex][columnIndex - 1].columnSum['1']
+      }
+    }
+  }
+
+  const lastRowIndex = grid.length - 1
+  const lastColumnIndex = grid[0].length - 1
+  for (let rowIndex = 0; rowIndex < grid.length; rowIndex++) {
+    for (
+      let columnIndex = 0;
+      columnIndex < grid[rowIndex].length;
+      columnIndex++
+    ) {
+      grid[rowIndex][columnIndex].output =
+        grid[rowIndex][lastColumnIndex].columnSum['1'] -
+        grid[rowIndex][lastColumnIndex].columnSum['0'] +
+        grid[lastRowIndex][columnIndex].rowSum['1'] -
+        grid[lastRowIndex][columnIndex].rowSum['0']
+    }
+  }
+
+  for (let rowIndex = 0; rowIndex < grid.length; rowIndex++) {
+    for (
+      let columnIndex = 0;
+      columnIndex < grid[rowIndex].length;
+      columnIndex++
+    ) {
+      grid[rowIndex][columnIndex] = grid[rowIndex][columnIndex].output
+    }
+  }
+
+  return grid
+}"
+Examples: "Example 1:
+
+Input: grid = [[0,1,1],[1,0,1],[0,0,1]]
+Output: [[0,0,4],[0,0,4],[-2,-2,2]]
+Explanation:
+- diff[0][0] = onesRow0 + onesCol0 - zerosRow0 - zerosCol0 = 2 + 1 - 1 - 2 = 0 
+- diff[0][1] = onesRow0 + onesCol1 - zerosRow0 - zerosCol1 = 2 + 1 - 1 - 2 = 0 
+- diff[0][2] = onesRow0 + onesCol2 - zerosRow0 - zerosCol2 = 2 + 3 - 1 - 0 = 4 
+- diff[1][0] = onesRow1 + onesCol0 - zerosRow1 - zerosCol0 = 2 + 1 - 1 - 2 = 0 
+- diff[1][1] = onesRow1 + onesCol1 - zerosRow1 - zerosCol1 = 2 + 1 - 1 - 2 = 0 
+- diff[1][2] = onesRow1 + onesCol2 - zerosRow1 - zerosCol2 = 2 + 3 - 1 - 0 = 4 
+- diff[2][0] = onesRow2 + onesCol0 - zerosRow2 - zerosCol0 = 1 + 1 - 2 - 2 = -2
+- diff[2][1] = onesRow2 + onesCol1 - zerosRow2 - zerosCol1 = 1 + 1 - 2 - 2 = -2
+- diff[2][2] = onesRow2 + onesCol2 - zerosRow2 - zerosCol2 = 1 + 3 - 2 - 0 = 2
+
+
+Example 2:
+
+Input: grid = [[1,1,1],[1,1,1]]
+Output: [[5,5,5],[5,5,5]]
+Explanation:
+- diff[0][0] = onesRow0 + onesCol0 - zerosRow0 - zerosCol0 = 3 + 2 - 0 - 0 = 5
+- diff[0][1] = onesRow0 + onesCol1 - zerosRow0 - zerosCol1 = 3 + 2 - 0 - 0 = 5
+- diff[0][2] = onesRow0 + onesCol2 - zerosRow0 - zerosCol2 = 3 + 2 - 0 - 0 = 5
+- diff[1][0] = onesRow1 + onesCol0 - zerosRow1 - zerosCol0 = 3 + 2 - 0 - 0 = 5
+- diff[1][1] = onesRow1 + onesCol1 - zerosRow1 - zerosCol1 = 3 + 2 - 0 - 0 = 5
+- diff[1][2] = onesRow1 + onesCol2 - zerosRow1 - zerosCol2 = 3 + 2 - 0 - 0 = 5"
+--
+
+Title: 2545. Sort the Students by Their Kth Score
+Q: "There is a class with m students and n exams. You are given a 0-indexed m x n integer matrix score, where each row represents one student and score[i][j] denotes the score the ith student got in the jth exam. The matrix score contains distinct integers only.
+
+You are also given an integer k. Sort the students (i.e., the rows of the matrix) by their scores in the kth (0-indexed) exam from the highest to the lowest.
+
+Return the matrix after sorting it."
+A: "var sortTheStudents = function (score, k) {
+    return score.sort((a, b) => b[k] - a[k])
+};"
+Examples: "Example 1:
+
+Input: score = [[10,6,9,1],[7,5,11,2],[4,8,3,15]], k = 2
+Output: [[7,5,11,2],[10,6,9,1],[4,8,3,15]]
+Explanation: In the above diagram, S denotes the student, while E denotes the exam.
+- The student with index 1 scored 11 in exam 2, which is the highest score, so they got first place.
+- The student with index 0 scored 9 in exam 2, which is the second highest score, so they got second place.
+- The student with index 2 scored 3 in exam 2, which is the lowest score, so they got third place.
+
+
+Example 2:
+
+Input: score = [[3,4],[5,6]], k = 0
+Output: [[5,6],[3,4]]
+Explanation: In the above diagram, S denotes the student, while E denotes the exam.
+- The student with index 1 scored 5 in exam 0, which is the highest score, so they got first place.
+- The student with index 0 scored 3 in exam 0, which is the lowest score, so they got second place."
+--
+
+Title: 1773. Count Items Matching a Rule
+Q: "You are given an array items, where each items[i] = [typei, colori, namei] describes the type, color, and name of the ith item. You are also given a rule represented by two strings, ruleKey and ruleValue.
+
+The ith item is said to match the rule if one of the following is true:
+
+ruleKey == "type" and ruleValue == typei.
+ruleKey == "color" and ruleValue == colori.
+ruleKey == "name" and ruleValue == namei.
+
+Return the number of items that match the given rule."
+A: "const RULE_IDX = {
+    'type': 0,
+    'color': 1,
+    'name': 2
+};
+
+var countMatches = function(items, ruleKey, ruleValue) {
+    return items.reduce((ans, item) => item[RULE_IDX[ruleKey]] === ruleValue ? ans + 1 : ans, 0);
+};"
+Examples: "Example 1:
+
+Input: items = [["phone","blue","pixel"],["computer","silver","lenovo"],["phone","gold","iphone"]], ruleKey = "color", ruleValue = "silver"
+Output: 1
+Explanation: There is only one item matching the given rule, which is ["computer","silver","lenovo"].
+
+
+Example 2:
+
+Input: items = [["phone","blue","pixel"],["computer","silver","phone"],["phone","gold","iphone"]], ruleKey = "type", ruleValue = "phone"
+Output: 2
+Explanation: There are only two items matching the given rule, which are ["phone","blue","pixel"] and ["phone","gold","iphone"]. Note that the item ["computer","silver","phone"] does not match."
+--

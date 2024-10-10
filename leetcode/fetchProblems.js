@@ -17,7 +17,6 @@ async function main() {
     const cacheFilePath = path.join(__dirname, '../data/CS/cache', `${TAG}_links.js`);
     let hrefs;
 
-
     if (fs.existsSync(cacheFilePath)) {
         // Read from cache
         hrefs = JSON.parse(fs.readFileSync(cacheFilePath, 'utf8'));
@@ -39,9 +38,12 @@ async function main() {
 
     const previousProblems = await readDataFromFile(readableProblemsPath);
 
+    await skipBanner(browser, hrefs[0]); // new page banner for dynamic view
+
     for (const href of hrefs) {
-        // console.log(href);
-        if (existingData.some(item => item.problemLink === href)) {
+        if (existingData.some(item => {
+            return item.problemLink === href;
+        })) {
             continue;
         }
 
@@ -50,7 +52,9 @@ async function main() {
         const { problem, examples, constraints } = splitDescription(description);
         const solutionsUrl = href + '/solutions/';
         const { solutionLink, htmlSolution, textSolution } = await fetchSolution(browser, solutionsUrl);
-
+        if (!solutionLink) {
+            continue;
+        }
         const formattedCode = await prettier.format(textSolution, {
             semi: false,
             parser: "babel"
@@ -60,11 +64,11 @@ async function main() {
         const escapedSolution = encodeBrakets(formattedCode);
         const inlineSolution = await highlightWithInlineStyles(escapedSolution);
 
-        await saveReadableData({
-            title,
-            problem,
-            textSolution,
-        }, previousProblems);
+        // await saveReadableData({
+        //     title,
+        //     problem,
+        //     textSolution,
+        // }, previousProblems);
 
         await saveProblemData({
             title,
@@ -79,6 +83,7 @@ async function main() {
             inlineSolution
         }, existingData);
     }
+
     // await browser.close();
 }
 
@@ -86,6 +91,34 @@ main().then(() => {
     console.log("done");
 }).catch(console.error);
 
+async function waitForXPathOrTimeout(page, xpath, timeout) {
+    let timeoutHandle;
+    const timeoutPromise = new Promise(resolve => {
+        timeoutHandle = setTimeout(() => resolve(false), timeout); // resolve false on timeout
+    });
+
+    const xpathFound = await Promise.race([
+        page.waitForXPath(xpath).then(() => true), // resolve true if found
+        timeoutPromise
+    ]);
+
+    clearTimeout(timeoutHandle);
+    return xpathFound;
+}
+
+async function skipBanner(browser, solutionUrl) {
+    const page = await browser.newPage();
+    await page.goto(solutionUrl, { waitUntil: 'domcontentloaded' });
+
+    const accept = await page.$('button.font-medium.items-center.whitespace-nowrap.inline-flex.bg-fill-3.rounded-full.text-xl.text-white');
+    await accept.click();
+
+    await page.waitForSelector('button[title="Skip"]', { visible: true });
+    const closeTutorial = await page.$('button[title="Skip"]');
+    await closeTutorial.click();
+
+    page.close();
+}
 
 async function fetchSolution(browser, solutionUrl) {
 
@@ -98,7 +131,13 @@ async function fetchSolution(browser, solutionUrl) {
     const svgParentDiv = await page.$('div.absolute.right-4.top-0 svg path[d="M20 8l-8 8-8-8"]');
     await svgParentDiv.click();
 
-    await page.waitForXPath("//span[contains(., 'JavaScript')]");
+    const jsFound = await waitForXPathOrTimeout(page, "//span[contains(., 'JavaScript')]", 2000);
+    if (!jsFound) {
+        console.error(`JS Solution not found: ${solutionUrl}`);
+        page.close();
+        return { solutionLink: "", htmlSolution: "", textSolution: "" };
+    }
+
     let [javascriptButton] = await page.$x("//span[contains(., 'JavaScript')]");
 
 
@@ -137,9 +176,11 @@ async function fetchSolution(browser, solutionUrl) {
     await page.waitForSelector('div.group:first-of-type');
 
     // Extract the solution in HTML and text format
-    const solutionBlocks = await page.$$('div.group');
+
+    const solutionBlocks = await page.$$('.group.flex.w-full.cursor-pointer.flex-col');
+
     for (const block of solutionBlocks) {
-        const dateAndlanguages = await block.$$eval('.text-xs', nodes => nodes.map(n => n.textContent.trim()));
+        const languages = await block.$$eval('.whitespace-nowrap', nodes => nodes.map(n => n.textContent.trim()));
 
         const otherLanguages = [
             "C++", "Java", "Python3", "Python", "C", "C#", "Ruby", "Swift",
@@ -147,78 +188,84 @@ async function fetchSolution(browser, solutionUrl) {
             "Erlang", "Elixir", "PHP", "Racket"
         ];
 
-        if (!otherLanguages.some(lang => dateAndlanguages.includes(lang))) {
-            const date = new Date(dateAndlanguages[0]);
-            const es6ReleasePlusYear = new Date('June 17, 2016');
-            if (date >= es6ReleasePlusYear) {
-                const solutionLinkElement = await block.$('a[href*="/problems/"]');
+        if (!otherLanguages.some(lang => languages.includes(lang))) {
+            // const dateString = block.$$eval('.text-label-3.min-w-max.text-xs', nodes => nodes.map(n => n.textContent.trim()));
+            // const date = new Date(dateString);
+            // const es6ReleasePlusYear = new Date('June 17, 2016');
+            // if (date >= es6ReleasePlusYear) {
+            // Gave up on the date since it was no longer trivial
+            const solutionLinkElement = await block.$('a[href*="/problems/"]');
 
-                if (solutionLinkElement) {
-                    // Ensure the link opens in the same tab
-                    await page.evaluate(el => el.target = '_self', solutionLinkElement);
+            if (solutionLinkElement) {
+                // Ensure the link opens in the same tab
+                await page.evaluate(el => el.target = '_self', solutionLinkElement);
 
-                    // Click on the solution link
-                    await solutionLinkElement.click();
-                    await page.waitForSelector('div.break-words'); // Wait for the solution content to load
-                    await page.waitForFunction('document.readyState === "complete"');
+                // Click on the solution link
+                await Promise.allSettled([
+                    page.waitForNavigation({ waitUntil: 'networkidle0' }),
+                    solutionLinkElement.click()
+                ]);
+                await page.waitForSelector('div.break-words'); // Wait for the solution content to load
+                await page.waitForFunction('document.readyState === "complete"');
 
-                    // Extract the solution URL, HTML and text content
-                    const solutionLink = await page.url();
-                    const htmlSolution = await page.$eval('div.break-words', div => div.innerHTML);
-                    const { lastDivSolutionText, firstDivSolutionText } = await page.$eval('div.break-words', div => {
-                        // Function to recursively find the last element with a class starting with 'language-'
-                        const findLastLanguageElement = (element) => {
-                            const children = Array.from(element.children);
-                            let lastLanguageElement = null;
+                // Extract the solution URL, HTML and text content
+                const solutionLink = await page.url();
+                const htmlSolution = await page.$eval('div.break-words', div => div.innerHTML);
+                const { lastDivSolutionText, firstDivSolutionText } = await page.$eval('div.break-words', div => {
+                    // Function to recursively find the last element with a class starting with 'language-'
+                    const findLastLanguageElement = (element) => {
+                        const children = Array.from(element.children);
+                        let lastLanguageElement = null;
 
-                            for (const child of children) {
-                                if (typeof child.className === 'string' && child.className.startsWith('language-')) {
-                                    lastLanguageElement = child; // Update if a new match is found
-                                }
-                                // Recursively check child elements
-                                const nestedLanguageElement = findLastLanguageElement(child);
-                                if (nestedLanguageElement) {
-                                    lastLanguageElement = nestedLanguageElement;
-                                }
+                        for (const child of children) {
+                            if (typeof child.className === 'string' && child.className.startsWith('language-')) {
+                                lastLanguageElement = child; // Update if a new match is found
                             }
+                            // Recursively check child elements
+                            const nestedLanguageElement = findLastLanguageElement(child);
+                            if (nestedLanguageElement) {
+                                lastLanguageElement = nestedLanguageElement;
+                            }
+                        }
 
-                            return lastLanguageElement;
-                        };
+                        return lastLanguageElement;
+                    };
 
-                        // Start the recursive search from 'div.break-words'
-                        const lastJsCodeElement = findLastLanguageElement(div);
-                        const lastDivSolutionText = lastJsCodeElement?.innerText ?? "";
-                        const firstDiv = div.querySelector('[class^="language-"]');
-                        const firstDivSolutionText = firstDiv?.innerText ?? "";
+                    // Start the recursive search from 'div.break-words'
+                    const lastJsCodeElement = findLastLanguageElement(div);
+                    const lastDivSolutionText = lastJsCodeElement?.innerText ?? "";
+                    const firstDiv = div.querySelector('[class^="language-"]');
+                    const firstDivSolutionText = firstDiv?.innerText ?? "";
 
-                        // Return the inner text of the found element or empty string if not found
-                        return { lastDivSolutionText, firstDivSolutionText };
+                    // Return the inner text of the found element or empty string if not found
+                    return { lastDivSolutionText, firstDivSolutionText };
+                });
+
+                let textSolution = '';
+                try {
+                    await prettier.format(lastDivSolutionText, {
+                        semi: false,
+                        parser: "babel"
                     });
-
-                    let textSolution = '';
+                    textSolution = lastDivSolutionText;
+                } catch (error) {
                     try {
-                        await prettier.format(lastDivSolutionText, {
+                        await prettier.format(firstDivSolutionText, {
                             semi: false,
                             parser: "babel"
                         });
-                        textSolution = lastDivSolutionText;
+                        textSolution = firstDivSolutionText;
                     } catch (error) {
-                        try {
-                            await prettier.format(firstDivSolutionText, {
-                                semi: false,
-                                parser: "babel"
-                            });
-                            textSolution = firstDivSolutionText;
-                        } catch (error) {
-                            console.log(`Skipping solution find it manually: ${solutionUrl}`);
-                        }
-                    }
-                    if (textSolution) {
-                        console.log(`Solution found for: ${solutionUrl}`);
+                        console.error(`Skipping solution find it manually: ${solutionUrl}`);
                         return { solutionLink, htmlSolution, textSolution };
                     }
-                    await page.close();
                 }
+                if (textSolution) {
+                    await page.close();
+                    console.log(`Solution found for: ${solutionUrl}`);
+                    return { solutionLink, htmlSolution, textSolution };
+                }
+
             }
         }
     }
@@ -253,14 +300,17 @@ async function readDataFromFile(filePath) {
 
 async function fetchProblemUrls(url, browser) {
     const page = await browser.newPage();
-    await page.goto(url, { waitUntil: 'networkidle0', timeout: 60000 });
+    try {
+        await page.goto(url, { waitUntil: 'networkidle0', timeout: 5000 });
+    } catch (error) { }
+    await page.goto(url,);
 
     await page.waitForSelector('tbody.reactable-data', { timeout: 10000 });
 
     await page.click('th.reactable-th-acceptance');
     await page.waitForTimeout(20);
     await page.click('th.reactable-th-acceptance');
-    await page.waitForTimeout(20);
+    await page.waitForTimeout(2000);
 
     // Scrape the hrefs and identify premium problems
     const { hrefs, premiumHrefs } = await page.evaluate(() => {

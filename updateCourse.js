@@ -8,30 +8,70 @@ config();
 
 // DONT FORGET TO UPDATE
 const env_user_prefix = "";
-const env_prefix = "GEO_IMG_";
+const env_prefix = "GEO_IMG_"; //NUMBERS_
 const userId = process.env?.[`${env_user_prefix}USER_ID`];
 const token = process.env?.[`${env_user_prefix}SUPER_MEMO_TOKEN`];
 const courseId = process.env?.[`${env_prefix}COURSE_ID`];
-const USE_CACHE = true;
 
+// Update next consts then run
 const COURSE_FILENAME = "./data/geogussr/courses/GeoImages.json";
-const MAP_FILENAME = "./data/geogussr/map_images/cache/trees.json";
-const BASE_URL = 'https://public.fotki.com/GeogussrLearning/geohints-trees-map-/?show=all';
+const USE_CACHE = true;
+const MAP_FILENAME = "./data/learning and memory/cache/numbers.json";
+const BASE_URL = 'https://public.fotki.com/GeogussrLearning/numbers-small/?show=all';
 
 const updateCourse = async (userId, courseId, token, courseName) => {
     const course = await getCourse(userId, courseId, token, courseName, USE_CACHE);
+    console.log("course should be object", typeof course);
 
     const filePath = path.resolve(`${courseName}`);
-    const mapFilePath = path.resolve(`${MAP_FILENAME}`);
+    // const mapFilePath = path.resolve(`${MAP_FILENAME}`);
     writeFileSync(filePath, JSON.stringify(course, null, 4));
 
-    const updateList = await getMapImageUrlAndTitles(BASE_URL, mapFilePath);
-    writeFileSync(mapFilePath, JSON.stringify(updateList, null, 4));
+    // const updateList = await getMapImageUrlAndTitles(BASE_URL, mapFilePath);
+    // writeFileSync(mapFilePath, JSON.stringify(updateList, null, 4));
 
 
-    // const updateList = [
-    //     "Sources/Signs/Street/sweden_11.jpg"
-    // ];
+    const updateList = [... new Set([
+        "https://images15.fotki.com/v1685/photos/5/4180775/16588561/botswana2-th.jpg",
+        "https://images49.fotki.com/v1679/photos/5/4180775/16588561/canada8-th.jpg",
+        "https://images12.fotki.com/v1686/photos/5/4180775/16588561/united_states-th.jpg",
+        "https://images12.fotki.com/v1686/photos/5/4180775/16588561/lesotho-th.jpg",
+        "https://images12.fotki.com/v1681/photos/5/4180775/16588561/italy4-th.jpg",
+        "https://images12.fotki.com/v1686/photos/5/4180775/16588561/canada9-th.jpg",
+        "https://images49.fotki.com/v1680/photos/5/4180775/16588561/greece2-th.jpg",
+        "https://images14.fotki.com/v1689/photos/5/4180775/16588561/czech_republic2-th.jpg",
+        "https://images49.fotki.com/v1680/photos/5/4180775/16588561/chile-th.jpg",
+        "https://images12.fotki.com/v1686/photos/5/4180775/16588561/ghana-th.jpg",
+        "https://images34.fotki.com/v1690/photos/5/4180775/16588561/monaco-th.jpg",
+        "https://images20.fotki.com/v1684/photos/5/4180775/16588561/united_states2-th.jpg",
+        "https://images49.fotki.com/v1679/photos/5/4180775/16588561/sweden4-th.jpg",
+        "https://images20.fotki.com/v1684/photos/5/4180775/16588561/canada10-th.jpg",
+        "https://images49.fotki.com/v1679/photos/5/4180775/16588561/israel4-th.jpg",
+        "https://images34.fotki.com/v1690/photos/5/4180775/16588561/ukraine2-th.jpg",
+        "https://images12.fotki.com/v1686/photos/5/4180775/16588561/malaysia3-th.jpg",
+        "https://images15.fotki.com/v1685/photos/5/4180775/16588561/botswana2-th.jpg",
+        "https://images49.fotki.com/v1679/photos/5/4180775/16588561/canada8-th.jpg",
+        "https://images12.fotki.com/v1686/photos/5/4180775/16588561/united_states-th.jpg",
+        "https://images12.fotki.com/v1686/photos/5/4180775/16588561/lesotho-th.jpg",
+        "https://images12.fotki.com/v1681/photos/5/4180775/16588561/italy4-th.jpg",
+        "https://images12.fotki.com/v1686/photos/5/4180775/16588561/canada9-th.jpg",
+        "https://images49.fotki.com/v1680/photos/5/4180775/16588561/greece2-th.jpg",
+        "https://images14.fotki.com/v1689/photos/5/4180775/16588561/czech_republic2-th.jpg",
+        "https://images49.fotki.com/v1680/photos/5/4180775/16588561/chile-th.jpg",
+        "https://images12.fotki.com/v1686/photos/5/4180775/16588561/ghana-th.jpg",
+        "https://images34.fotki.com/v1690/photos/5/4180775/16588561/monaco-th.jpg",
+        "https://images20.fotki.com/v1684/photos/5/4180775/16588561/united_states2-th.jpg",
+        "https://images49.fotki.com/v1679/photos/5/4180775/16588561/sweden4-th.jpg",
+        "https://images20.fotki.com/v1684/photos/5/4180775/16588561/canada10-th.jpg",
+        "https://images49.fotki.com/v1679/photos/5/4180775/16588561/israel4-th.jpg",
+        "https://images34.fotki.com/v1690/photos/5/4180775/16588561/ukraine2-th.jpg",
+    ])];
+
+
+    console.log(`updating ${updateList.length}`);
+    let count = 0;
+
+    let updated = [];
     for (const card of course) {
         const pageId = card.number;
         const question = card.content.question;
@@ -40,26 +80,34 @@ const updateCourse = async (userId, courseId, token, courseName) => {
         let questionContent = JSON.parse(question)?.content;
         let answerContent = JSON.parse(answer)?.content;
 
-        // questionObj.content.includes('Sources/Signs/Pedestrian')
+        // const foundUpdate = questionContent.includes('https://images20.fotki.com/v1684/photos/5/4180775/16588561/Indonesia2-vi.png');
 
-        const foundUpdate = updateList.find(update => answerContent.includes(update[0]));
+        // console.log(Number(questionContent));
+
+
+        const foundUpdate = updateList.find(update => {
+            if (questionContent.includes(update)) updated.push(update);
+            return questionContent.includes(update);
+        });
+        // const foundUpdate = updateList.find(update => Number(update[0]) === Number(questionContent));
 
         if (foundUpdate) {
+            count++;
             const mapUrl = foundUpdate[1];
 
             // console.log(mapUrl);
-            // console.log(questionContent);
-            answerContent += `<a href="${mapUrl}" target="_blank"><img src="${mapUrl}" style="max-height:450px;display:block;margin:auto;" alt="${foundUpdate[0]}" /></a>`;
+            // answerContent = `<a href="${mapUrl}" target="_blank"><img src="${mapUrl}" style="max-height:450px;display:block;margin:auto;" alt="${foundUpdate[0]}" /></a><div>${answerContent}</div>`;
 
-            console.log(answerContent);
-            await updateCard({
-                userId,
-                courseId,
-                pageId,
-                questionContent,
-                answerContent,
-                token
-            });
+            // console.log(questionContent);
+            // console.log(answerContent);
+            // await updateCard({
+            //     userId,
+            //     courseId,
+            //     pageId,
+            //     questionContent,
+            //     answerContent,
+            //     token
+            // });
         }
         // if (questionObj.content.includes('Sources/Signs/Pedestrian')
         //     && (questionObj.content.includes('guam') || questionObj.content.includes('guatemala.svg'))
@@ -104,7 +152,8 @@ const updateCourse = async (userId, courseId, token, courseName) => {
         //     // });
         // }
     }
-
+    console.log(`Didnt Update`, updateList.filter(x => !updated.includes(x)));
+    console.log(`Updated ${count}`);
 };
 
 const updateCard = async ({
@@ -178,7 +227,7 @@ async function getMapImageUrlAndTitles(url, mapFilePath) {
             if (!imgTag) return null;
 
             const imgUrl = imgTag.src;
-            // filter out common images 
+            // filter out common images
             if (imgUrl.endsWith('icon-premium-small.gif') || imgUrl.endsWith('bigavatar.jpg')) {
                 return null;
             }

@@ -35,25 +35,28 @@ export function extractQuestion({
 export function extractAlgoAnswer({
     response, solutionsUrl1, imageTag
 }) {
-    const algo = extractSection(response, "Algo\/Datastructure")
-    const sentance = extractSection(response, "Flashcard Sentence")
+    const trick = extractSection(response, "Solution Trick")
+    const algorithm = extractSection(response, "Problem Algorithm")
+    const datastructure = extractSection(response, "Problem Datastructure")
+    const DAS = algorithm + " - " + datastructure
     const pitfalls = extractSection(response, "Common Mistakes")
     const edgeCases = extractSection(response, "Edge Cases")
     const intuition = extractSection(response, "Key Intuition")
     const code = extractSection(response, "Primary Solution Code")
 
     const answer =
-        `<b><a href="${solutionsUrl1}">${algo}</a></b>
+        `<b><a href="${solutionsUrl1}">${trick}</a></b>
          <div>${imageTag}</div>
-         <div class="text-container"><br/>${sentance}<br/><br/></div>
+         <div>code</div>
+         <div class="text-container"><br/>${code}<br/><br/></div>
+         <div>DAS</div>
+         <div class="text-container"><br/>${DAS}<br/><br/></div>
          <div>pitfalls</div>
          <div class="text-container"><br/>${pitfalls}<br/><br/></div>
          <div>edge cases</div>
          <div class="text-container"><br/>${edgeCases}<br/><br/></div>
          <div>intuition</div>
          <div class="text-container"><br/>${intuition}<br/><br/></div>
-         <div>code</div>
-         <div class="text-container"><br/>${code}<br/><br/></div>
         `
 
     return answer
@@ -64,7 +67,9 @@ export function extractAnswer({
 }) {
 
     // Extract sections from response
-    const algo = extractSection(response, "Algo\/Datastructure");
+    const algorithm = extractSection(response, "Problem Algorithm")
+    const datastructure = extractSection(response, "Problem Datastructure")
+    const DAS = algorithm + " - " + datastructure
     const code = extractSection(response, "Primary Solution Code");
     const code2 = extractSection(response, "Secondary Solution Code");
     const steps = extractSection(response, "Enumerated Steps 1");
@@ -75,7 +80,7 @@ export function extractAnswer({
 
     // Format the answer string
     const answer =
-        `<b><a href="${solutionsUrl1}">${algo}</a></b>
+        `<b><a href="${solutionsUrl1}">${DAS}</a></b>
 <div class="text-container"><br/>${solution + solutionImages}<br/><br/></div>
 <div>${code}</div>
 <div>${steps}</div>
@@ -98,8 +103,6 @@ export function extractSection(text, sectionTitle) {
     const headerRegexAsterisks = new RegExp(`^.*\\*\\*${sectionTitle}.?\\*\\*`, 'i');
 
     const hashTitleExists = lines.some(line => headerRegexHash.test(line.trim()));
-    // "Algo\/Datastructure"
-    //**Algo/Datastructure**: Sorting - Max Width Between Consecutive X-Coordinates
 
     const sectionHeaderRegex = hashTitleExists ? headerRegexHash : headerRegexAsterisks;
     for (const line of lines) {

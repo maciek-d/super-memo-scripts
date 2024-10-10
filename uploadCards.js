@@ -1,39 +1,56 @@
-import axios from 'axios';
+import axios from "axios";
 import { readFile } from 'fs/promises';
 import config from "./helpers/import_env.js";
 config();
 
+console.log("userId", process.env.USER_ID);
 
-console.log(process.env.USER_ID);
-const URL_ROUTE = "CS/new_file.js"; // DONT FORGET TO UPDATE
-const env_prefix = "ML_";
+const BASE_PATH = "./data";
+const FILE_PATH = `${BASE_PATH}/leetcode/newFlashcards.js`; // DONT FORGET TO UPDATE
+// const env_prefix = "GEO_IMG_";
+const env_prefix = "LEETCODE_"; // When adding a new course dont forget to get CourseId and TargetParentId
 const env_user_prefix = "";
+const SHUFFLE = false; // shuffle the cards prior to upload?
 
-const courseId = process.env?.[`${env_prefix}COURSE_ID`]; // DONT FORGET TO UPDATE
-const targetParentNumber = process.env?.[`${env_prefix}TARGET_PARENT_NUMBER`]; // DONT FORGET TO UPDATE
+const courseId = process.env?.[`${env_prefix}COURSE_ID`];
+const targetParentNumber = process.env?.[`${env_prefix}TARGET_PARENT_NUMBER`];
 
 const userId = process.env?.[`${env_user_prefix}USER_ID`];
 const token = process.env?.[`${env_user_prefix}SUPER_MEMO_TOKEN`];
 
-async function readDataFromFile() {
+async function readDataFromFile(filePath) {
     try {
-        if (URL_ROUTE.includes("json")) {
-            const data = await readFile(`./data/${URL_ROUTE}`, 'utf-8');
+        const data = await readFile(filePath, 'utf-8');
+        if (filePath.endsWith('.json')) {
+            // Handle JSON files
             return JSON.parse(data);
+        } else if (filePath.endsWith('.js')) {
+            // Handle JavaScript files
+            try {
+                // Attempt to import the module
+                const module = await import(`file://${filePath}`);
+                return module.default || []; // Use exported array, if available
+            } catch (importErr) {
+                // If import fails, try to parse it as an array
+                try {
+                    return eval(data); // Use eval as a fallback for non-module JS files
+                } catch (evalErr) {
+                    console.error("Error parsing JS file:", evalErr);
+                }
+            }
         }
-        const module = await import(`./data/${URL_ROUTE}`);
-        return module.default;
-
     } catch (err) {
-        console.log(err);
-        return [];
+        console.error("Error reading file:", err);
     }
+    return []; // Default return value in case of failure
 }
 
-const run = async () => {
-
-    const cards = await readDataFromFile();
-    shuffle(cards); // possibly a better way to separate reoccuring values could be needed
+const run = async (filePath = null) => {
+    filePath = filePath ? filePath : FILE_PATH;
+    // TODO check if the token is outdated. 
+    // Possibly simply mock the login and fetch a newer token.
+    const cards = await readDataFromFile(filePath);
+    if (SHUFFLE) shuffle(cards); // possibly a better way to separate reoccuring values could be needed
     const jsdom = await import('jsdom');
     const { JSDOM } = jsdom;
 
@@ -46,9 +63,13 @@ const run = async () => {
 
     console.log(newCardUrl);
     console.log("number of cards", cards.length);
+    console.log("Example Card");
+    console.log("question:", cards?.[0].question.slice(0, 20));
+    console.log("answer:", cards?.[0].answer.slice(0, 20));
+
     for (const card of cards) {
         const response = await postNewCard(newCardUrl, card.question, card.answer);
-        console.log(response);
+        if (response?.status !== 200) console.log(response);
     }
 };
 
@@ -82,11 +103,6 @@ const postNewCard = async (newCardUrl, question, answer) => {
     return "";
 };
 
-run().then(() => {
-    console.log("done");
-});
-
-
 function shuffle(array) {
     let currentIndex = array.length, randomIndex;
 
@@ -103,4 +119,13 @@ function shuffle(array) {
     }
 
     return array;
+}
+
+const filePathFromMeta = decodeURIComponent(new URL(import.meta.url).pathname);
+const isMain = filePathFromMeta === process.argv[1];
+
+if (isMain) { // doesn't run on import
+    run().then(() => {
+        console.log("done");
+    });
 }
