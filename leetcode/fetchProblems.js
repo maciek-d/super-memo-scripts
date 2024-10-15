@@ -120,7 +120,7 @@ async function skipBanner(browser, solutionUrl) {
     page.close();
 }
 
-async function fetchSolution(browser, solutionUrl) {
+async function scrapeSolutions(browser, solutionUrl) {
 
     const page = await browser.newPage();
     await page.goto(solutionUrl, { waitUntil: 'domcontentloaded' });
@@ -189,11 +189,6 @@ async function fetchSolution(browser, solutionUrl) {
         ];
 
         if (!otherLanguages.some(lang => languages.includes(lang))) {
-            // const dateString = block.$$eval('.text-label-3.min-w-max.text-xs', nodes => nodes.map(n => n.textContent.trim()));
-            // const date = new Date(dateString);
-            // const es6ReleasePlusYear = new Date('June 17, 2016');
-            // if (date >= es6ReleasePlusYear) {
-            // Gave up on the date since it was no longer trivial
             const solutionLinkElement = await block.$('a[href*="/problems/"]');
 
             if (solutionLinkElement) {

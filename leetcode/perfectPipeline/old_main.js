@@ -12,7 +12,8 @@ import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { existsSync, writeFileSync, readFileSync } from 'fs';
 import { postNewCard } from "./uploadFlashcard.js"
-import { extractQuestion, extractAnswer, extractFirstNumber, extractSection, extractAlgoAnswer, extractSolutionImages, stripCodeBlocks } from "./extractQA.js"
+import { extractQuestion, extractAnswer, extractFirstNumber, extractSection, extractAlgoAnswer, extractSolutionImages, stripCodeBlocks }
+from "./extractQA.js"
 import { createImage, getChatGPTResponse } from './gptApi.js';
 import { createFotkiAlbum, createFotkiFolder, uploadToFotki } from './fotkiApi.js';
 import { downloadImage } from './imageProcessing.js';
@@ -70,6 +71,12 @@ function saveCompleted(title, path) {
 }
 
 async function main() {
+    // TODO
+    // 1. Look for the other script that fetches data from leetcode and bring it here
+    // ./../../leetcode/singlePipeline/processProblem.js
+
+    // TODO important!
+    // Side quest. create a script for getting images out of fotki
 
     //    await createFotkiFolder(fotkiSid, fotkiUsername, "Leetcode")
     //    await createFotkiAlbum(fotkiSid, fotkiUsername, "Leetcode", "images")

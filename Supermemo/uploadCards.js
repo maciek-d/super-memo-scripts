@@ -1,6 +1,6 @@
 import axios from "axios";
 import { readFile } from 'fs/promises';
-import config from "./helpers/import_env.js";
+import config from "../helpers/import_env.js";
 config();
 
 console.log("userId", process.env.USER_ID);

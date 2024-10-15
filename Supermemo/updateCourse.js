@@ -2,8 +2,8 @@ import axios from 'axios';
 import { readFileSync, writeFileSync } from 'fs';
 import jsdom from 'jsdom';
 import path from 'path';
-import { getCourse } from "./helpers/course.js";
-import config from "./helpers/import_env.js";
+import { getCourse } from "../helpers/course.js";
+import config from "../helpers/import_env.js";
 config();
 
 // DONT FORGET TO UPDATE

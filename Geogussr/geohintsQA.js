@@ -1,6 +1,6 @@
 import axios from 'axios';
 import { writeFile } from 'fs/promises';
-import { fetchLatLonFromShortUrl } from "./helpers/googleMapApi.js";
+import { fetchLatLonFromShortUrl } from "../helpers/googleMapApi.js";
 
 import { config } from 'dotenv';
 config();

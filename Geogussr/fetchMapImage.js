@@ -3,10 +3,10 @@ import { writeFile } from 'fs/promises';
 import jsdom from 'jsdom';
 import path, { dirname } from 'path';
 import { fileURLToPath } from 'url';
-import { createDirectoryIfNotExists, readFileDataFullPath } from "./helpers/fileHelper.js";
-import { fetchLatLonFromShortUrl } from './helpers/googleMapApi.js';
+import { createDirectoryIfNotExists, readFileDataFullPath } from "../helpers/fileHelper.js";
+import { fetchLatLonFromShortUrl } from '../helpers/googleMapApi.js';
 
-import config from "./helpers/import_env.js";
+import config from "../helpers/import_env.js";
 config();
 
 

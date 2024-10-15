@@ -1,9 +1,9 @@
 import axios from 'axios';
 import { writeFileSync } from 'fs';
 import path from 'path';
-import { getCourse } from "./helpers/course.js";
-import config from "./helpers/import_env.js";
-import { createFlashcard } from './leetcode/singlePipeline/extractFlashcard.js';
+import { getCourse } from "../helpers/course.js";
+import config from "../helpers/import_env.js";
+import { createFlashcard } from './singlePipeline/extractFlashcard.js';
 config();
 
 // DONT FORGET TO UPDATE

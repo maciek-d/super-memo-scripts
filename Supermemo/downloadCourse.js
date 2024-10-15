@@ -1,9 +1,9 @@
 
 import fs from 'fs';
 import path from 'path';
-import { getCourse } from "./helpers/course.js";
+import { getCourse } from "../helpers/course.js";
 
-import config from "./helpers/import_env.js";
+import config from "../helpers/import_env.js";
 config();
 
 const FILENAME = "Leetcode.json"; // DONT FORGET TO UPDATE
