@@ -70,8 +70,9 @@ export function createUserMessage({ prompt, statement, solutions, ioExamples }) 
 
             lengthFirstComment = getSolutionsLength(solutions)
             if (solutions.length == 1) {
-                // TIP if you ever get here first trim all comments
-                // try selecting shorter solutions
+                // TIP if you ever see this warning
+                // 1. trim all comments
+                // 2. try selecting shorter solutions
                 // you can calculate the average or just sort by length
                 // you can also look into deleting repeating text from solutions
                 console.warn("Solutions was too long", statement);
@@ -116,13 +117,3 @@ export async function uploadImage(path, title, imageDescription) {
     return imageName
 }
 
-export async function createImage(prompt) {
-    const response = await openai.images.generate({
-        model: "dall-e-3",
-        prompt,
-        n: 1,
-        size: "1024x1024"
-    });
-
-    return response.data[0].url
-}

@@ -20,7 +20,7 @@ export async function uploadImagesToS3(imageData, imageName, s3Path) {
 
 async function uploadImageToS3({ imageData, imageName }) {
     // Fetch the presigned URL from your API Gateway endpoint
-    const presignedUrlWebhook = process.env.PRESIGNED_URL_WEBHOOK;
+    const presignedUrlWebhook = process.env.PRESIGNED_URL_WEBHOOK
     const requestUrl = `${presignedUrlWebhook}${imageName}`;
     const response = await fetch(requestUrl);
 

@@ -192,9 +192,9 @@ function extractImageTags(sourceText) {
     // surround images with a tag and add resize-image class
     if (imgTags) {
         const modifiedImgTags = imgTags.map(tag => {
-            const srcMatch = tag.match(/src="([^"]*)"/);
-            if (srcMatch) {
-                const src = srcMatch[1];
+            const srcmatch = tag.match(/src="([^"]*)"/);
+            if (srcmatch) {
+                const src = srcmatch[1];
                 return `<a href="${src}" target="_blank"><img class="resize-img" ${tag.slice(4)}</a>`;
             }
             return tag;

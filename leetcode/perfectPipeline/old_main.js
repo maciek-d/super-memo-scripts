@@ -1,4 +1,3 @@
-import puppeteer from 'puppeteer-extra'
 import StealthPlugin from 'puppeteer-extra-plugin-stealth'
 
 // Add stealth plugin and use it

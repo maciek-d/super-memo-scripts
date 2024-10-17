@@ -1,30 +1,8 @@
-export function extractQuestion({
-    title,
-    youtubeUrl, youtubeUrlJs,
-    solutionsUrl1, solutionsUrl2,
-    constraints, ioExamples,
-    imageHtml, problemUrl,
-    summary, description, bestIoExample,
-}) {
-    ioExamples = modifyImagesInPlace(ioExamples)
-    const problemNumber = extractFirstNumber(title);
-    const question = questionTemplate({
-        problemNumber, title, youtubeUrl, youtubeUrlJs,
-        problemUrl,
-        solutionsUrl1, solutionsUrl2,
-        ioExamples, constraints, description, bestIoExample,
-        summary, imageHtml
-    })
-
-    return question
-}
-
 export function extractAnswer({
     solutionsUrl1, solutionsUrl2,
     algorithm, complexity,
     solution2, solution,
-    steps2, steps,
-    code2, code,
+    steps2, steps, code2, code,
     datastructure
 }) {
     // Extract sections from response
@@ -52,16 +30,22 @@ export const extractFirstNumber = (str) => {
     return result ? parseInt(result[0]) : null; // Parse the first found number
 }
 
-function questionTemplate({
-    problemNumber,
+export function questionTemplate({
     title,
     problemUrl,
-    youtubeUrl, youtubeUrlJs,
+    youtubeUrl, youtubeUrlLang,
     solutionsUrl1, solutionsUrl2,
     ioExamples, constraints, summary, description, bestIoExample,
     imageHtml
 }) {
+    // TODO instead of passing all of these in pass in description only then extract everything here
 
+    ioExamples = modifyImagesInPlace(ioExamples)
+    bestIoExample = modifyImagesInPlace(bestIoExample)
+    summary = modifyImagesInPlace(summary)
+    description = modifyImagesInPlace(description)
+
+    const problemNumber = extractFirstNumber(title);
     const style = getStyle(problemNumber)
     const question =
         `${style}
@@ -77,7 +61,7 @@ ${imageHtml}
         <a href="${youtubeUrl}">
         <path fill="#FF3D00" d="M43.2,33.9c-0.4,2.1-2.1,3.7-4.2,4c-3.3,0.5-8.8,1.1-15,1.1c-6.1,0-11.6-0.6-15-1.1c-2.1-0.3-3.8-1.9-4.2-4C4.4,31.6,4,28.2,4,24c0-4.2,0.4-7.6,0.8-9.9c0.4-2.1,2.1-3.7,4.2-4C12.3,9.6,17.8,9,24,9c6.2,0,11.6,0.6,15,1.1c2.1,0.3,3.8,1.9,4.2,4c0.4,2.3,0.9,5.7,0.9,9.9C44,28.2,43.6,31.6,43.2,33.9z"></path><path fill="#FFF" d="M20 31L20 17 32 24z"></path>
     </svg></a>
-    JS: <a href="${youtubeUrlJs}">
+    JS: <a href="${youtubeUrlLang}">
         <svg xmlns="http://www.w3.org/2000/svg" x="0px" y="0px" width="30" height="25" viewBox="0 0 48 48">
         <path fill="#FF3D00" d="M43.2,33.9c-0.4,2.1-2.1,3.7-4.2,4c-3.3,0.5-8.8,1.1-15,1.1c-6.1,0-11.6-0.6-15-1.1c-2.1-0.3-3.8-1.9-4.2-4C4.4,31.6,4,28.2,4,24c0-4.2,0.4-7.6,0.8-9.9c0.4-2.1,2.1-3.7,4.2-4C12.3,9.6,17.8,9,24,9c6.2,0,11.6,0.6,15,1.1c2.1,0.3,3.8,1.9,4.2,4c0.4,2.3,0.9,5.7,0.9,9.9C44,28.2,43.6,31.6,43.2,33.9z"></path><path fill="#FFF" d="M20 31L20 17 32 24z"></path>
     </svg></a>

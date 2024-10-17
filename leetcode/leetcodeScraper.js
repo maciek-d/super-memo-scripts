@@ -1,4 +1,4 @@
-import { appendObjectToFile } from './fileUtils';
+import { appendObjectToFile } from './fileUtils.js'
 
 const DEBUG_PATH = `data/puppeteer_debug`
 

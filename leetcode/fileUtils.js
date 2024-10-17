@@ -1,5 +1,5 @@
 import { existsSync, readFileSync, writeFileSync } from "fs"
-import { createImage, promptChatGpt } from "./gptApi"
+import { createImage, promptChatGpt } from "./gptApi.js"
 
 export function readCachedUrls(dataPath) {
     const problemUrlCachePath = `${dataPath}/cache/problemUrl.js`

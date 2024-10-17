@@ -1,15 +1,26 @@
-import puppeteer from 'puppeteer';
-import { appendObjectToFile, appendToProcessedUrls, isProcessed, gptPrompt, readCachedUrls, writeCachedUrls, extractFirstNumber, fetchGptImage, extractDataFromGptResponse, saveProblemHtml, readByObjectKey, readCurrentIndex, safeReadFile }
-    from './fileUtils';
-import { scrapeProblem, scrapeProblemUrls, scrapeSolutions } from './leetcodeScraper';
-import { readFileSync } from 'fs';
-import { createUserMessage } from './gptApi';
-import { uploadImagesToS3 } from './s3Api';
-import { extractAnswer, extractQuestion } from './prepareFlashcard';
-import { postNewCard, refreshToken, updateCard } from './supermemoApi';
+
+import {
+    appendObjectToFile, appendToProcessedUrls, isProcessed,
+    gptPrompt, readCachedUrls, writeCachedUrls, extractFirstNumber,
+    fetchGptImage, extractDataFromGptResponse, readByObjectKey,
+    readCurrentIndex, safeReadFile
+} from './fileUtils.js';
+
+import { scrapeProblem, scrapeProblemUrls, scrapeSolutions } from './leetcodeScraper.js';
+import { createUserMessage } from './gptApi.js';
+import { uploadImagesToS3 } from './s3Api.js';
+import { extractAnswer, questionTemplate, } from './prepareFlashcard.js';
+import { updateSupermemoCard } from './supermemoApi.js';
 
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
+import { config } from 'dotenv';
+import { mkdir } from 'fs/promises';
+
+import StealthPlugin from 'puppeteer-extra-plugin-stealth'
+import puppeteer from 'puppeteer-extra';
+// Add stealth plugin and use it
+puppeteer.use(StealthPlugin());
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const envPath = join(__dirname, '.env')
@@ -58,6 +69,8 @@ async function main() {
         endOfBatchIndex : lastProblemIndex
     const problemUrlsSlice = problemUrls.slice(currentProblemIndex, lastBatchIndex)
 
+    console.log(problemUrls)
+
     for (const problemUrl of problemUrlsSlice) {
         if (isProcessed(problemUrls)) continue
         await processProblem(browser, problemUrl, LANGUAGE, courseId, targetParentNumber)
@@ -78,27 +91,7 @@ async function processProblem(browser, problemUrl, language) {
         title, statement, solutions, ioExamples, youtubeUrl, youtubeUrlLang
     })
 
-    await updateSupermemoCard(question, answer, problemUrl)
-}
-
-async function updateSupermemoCard(question, answer, problemUrl) {
-    const token = await refreshToken(SUPERMEMO_PATH, process.env.SM_USERNAME, process.env.SM_PASSWORD)
-
-    const superMemoCredentials = {
-        token,
-        userId: process.env.SM_USER_ID,
-        courseId: process.env.LEETCODE_COURSE_ID,
-        targetParentNumber: process.env.LEETCODE_TARGET_PARENT_NUMBER
-    }
-
-    const updateIdPath = `${SUPERMEMO_PATH}/update_ids.js`
-    const pageNumber = readByObjectKey(updateIdPath, problemUrl)
-    if (pageNumber) {
-        await updateCard(superMemoCredentials, pageNumber, question, answer)
-    } else {
-        const newPageNumber = await postNewCard(superMemoCredentials, question, answer)
-        appendObjectToFile(problemUrl, newPageNumber, updateIdPath)
-    }
+    await updateSupermemoCard(SUPERMEMO_PATH, question, answer, problemUrl)
 }
 
 async function generateFlashcard({
@@ -106,7 +99,7 @@ async function generateFlashcard({
 }) {
 
     const prompt = safeReadFile(`${DATA_ROOT}/promptTemplate.txt`)
-        const userMessage = createUserMessage({ prompt, statement, solutions, ioExamples })
+    const userMessage = createUserMessage({ prompt, statement, solutions, ioExamples })
     const gptResponse = await gptPrompt(title, prompt, userMessage)
 
     return extractQA(gptResponse, solutions, ioExamples, youtubeUrl, youtubeUrlLang)
@@ -123,7 +116,7 @@ async function extractQA(gptResponse, solutions, ioExamples, youtubeUrl, youtube
     } = extractDataFromGptResponse(gptResponse, solutions, language)
 
     const imageHtml = await getImageHtml(title, imageDescription, IMAGE_PATH)
-    const question = extractQuestion({
+    const question = questionTemplate({
         summary, description, bestIoExample,
         title, youtubeUrl, youtubeUrlLang,
         solutionsUrl1, solutionsUrl2,
@@ -151,11 +144,6 @@ async function getImageHtml(title, imageDescription, imagePath) {
 
     return imageHtml
 }
-
-main().then(() => {
-    console.log("done");
-})
-
 
 async function scrapeYoutubeVideoUrl(queryString, browser) {
     const page = await browser.newPage();
@@ -194,3 +182,8 @@ async function scrapeYoutubeVideoUrls(scrapedPath, browser, title, language) {
     appendObjectToFile(title, { youtubeUrl, youtubeUrlLang }, youtubeUrlsPath)
     return { youtubeUrl, youtubeUrlLang }
 }
+
+main().then(() => {
+    console.log("done");
+})
+

@@ -1,5 +1,6 @@
 import axios from "axios";
 import { existsSync, readFileSync, writeFileSync } from "fs";
+import { appendObjectToFile, readByObjectKey } from "./fileUtils.js"
 
 export async function refreshToken(tokenPath, username, password) {
     tokenPath = `${tokenPath}/token.txt`
@@ -132,4 +133,24 @@ export async function updateCard({
 
     const data = await response.json();
     return data;
+}
+
+export async function updateSupermemoCard(supermemoPath, question, answer, problemUrl) {
+    const token = await refreshToken(supermemoPath, process.env.SM_USERNAME, process.env.SM_PASSWORD)
+
+    const superMemoCredentials = {
+        token,
+        userId: process.env.SM_USER_ID,
+        courseId: process.env.LEETCODE_COURSE_ID,
+        targetParentNumber: process.env.LEETCODE_TARGET_PARENT_NUMBER
+    }
+
+    const updateIdPath = `${supermemoPath}/update_ids.js`
+    const pageNumber = readByObjectKey(updateIdPath, problemUrl)
+    if (pageNumber) {
+        await updateCard(superMemoCredentials, pageNumber, question, answer)
+    } else {
+        const newPageNumber = await postNewCard(superMemoCredentials, question, answer)
+        appendObjectToFile(problemUrl, newPageNumber, updateIdPath)
+    }
 }
