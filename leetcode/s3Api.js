@@ -2,16 +2,16 @@ import sharp from 'sharp';
 
 export async function uploadImagesToS3(imageData, imageName, s3Path) {
     // Resize and upload the answer full-size image
-    const resizedAnswerImageData = await resizeImage(imageData, 1200, 1200); // Resize for full-size answer
+    const resizedImageData = await resizeImage(imageData, 1200, 1200); // Resize for full-size answer
     imageSrc = await uploadImageToS3({
-        imageData: resizedAnswerImageData,
+        imageData: resizedImageData,
         imageName: `${s3Path}/full/${imageName}`,
     });
 
     // Resize and upload the answer thumbnail image
-    const resizedAnswerThumbData = await resizeImage(imageData, 350, 450); // Resize for thumbnail answer
+    const resizedThumbData = await resizeImage(imageData, 350, 450); // Resize for thumbnail answer
     thumbSrc = await uploadImageToS3({
-        imageData: resizedAnswerThumbData,
+        imageData: resizedThumbData,
         imageName: `${s3Path}/thumbs/${imageName}`,
     });
 

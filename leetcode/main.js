@@ -1,5 +1,5 @@
 import puppeteer from 'puppeteer';
-import { appendObjectToFile, appendToProcessedUrls, isProcessed, gptPrompt, readCachedUrls, writeCachedUrls, extractFirstNumber, fetchGptImage, extractDataFromGptResponse, saveProblemHtml, readByObjectKey }
+import { appendObjectToFile, appendToProcessedUrls, isProcessed, gptPrompt, readCachedUrls, writeCachedUrls, extractFirstNumber, fetchGptImage, extractDataFromGptResponse, saveProblemHtml, readByObjectKey, readCurrentIndex, safeReadFile }
     from './fileUtils';
 import { scrapeProblem, scrapeProblemUrls, scrapeSolutions } from './leetcodeScraper';
 import { readFileSync } from 'fs';
@@ -25,22 +25,32 @@ const LANGUAGE_OPTIONS = ["JavaScript", "C++", "Java", "Python3", "Python", "C",
 
 const DATA_ROOT = `./data/${LANGUAGE}`
 const DATA_PATH = `${DATA_ROOT}/${TAG}`
-const IMAGE_PATH = `${DATA_PATH}/ai-imgages`
-const TOKEN_PATH = `data/supermemo/token.txt`
-const SM_UPDATE_ID_PATH = `data/supermemo/update_ids.js`
+const IMAGE_PATH = `data/ai-imgages`
+const SUPERMEMO_PATH = `data/supermemo`
+const SCRAPED_PATH = `${DATA_PATH}/scraped`
 
-// TODO creeate all dir if they dont exist
-async function main() {
+async function setup() {
     if (!LANGUAGE_OPTIONS.includes(LANGUAGE)) throw new Error(`${LANGUAGE} not found in ${LANGUAGE_OPTIONS}`)
+    await mkdir(DATA_ROOT, { recursive: true })
+    await mkdir(DATA_PATH, { recursive: true })
+    await mkdir(IMAGE_PATH, { recursive: true })
+    await mkdir(SUPERMEMO_PATH, { recursive: true })
+    await mkdir(SCRAPED_PATH, { recursive: true })
+}
+
+async function main() {
+    await setup()
 
     // const browser = await puppeteer.launch({ headless: "new" })
     const browser = await puppeteer.launch({ headless: false })
 
+    // TODO this might only read some of the urls either fetch all of them
+    // or allow to fetch a certain number at at time and save all of the new ones
     const { problemUrls, premiumProblemUrls } =
         readCachedUrls(DATA_PATH) ?? await scrapeProblemUrls(browser, TAG)
     writeCachedUrls(problemUrls, premiumProblemUrls, DATA_PATH)
 
-    const currentProblemIndex = readCurrentIndex(DATA_PATH) ?? 0
+    const currentProblemIndex = readCurrentIndex(DATA_PATH)
 
     const endOfBatchIndex = currentProblemIndex + BATCH_SIZE
     const lastProblemIndex = problemUrls.length - 1
@@ -59,10 +69,10 @@ async function main() {
 // fetchProblems.js
 // TODO test with problem with images and solution with images
 
-async function processProblem(browser, problemUrl, language, courseId, targetParentNumber) {
-    const { title, statement, ioExamples } = await scrapeProblem(browser, problemUrl)
-    const solutions = await scrapeSolutions(browser, language, `${problemUrl}/solutions/`)
-    const { youtubeUrl, youtubeUrlLang } = await scrapeYoutubeVideoUrls(browser, title, language)
+async function processProblem(browser, problemUrl, language) {
+    const { title, statement, ioExamples } = await scrapeProblem(SCRAPED_PATH, browser, problemUrl)
+    const solutions = await scrapeSolutions(SCRAPED_PATH, browser, language, `${problemUrl}/solutions/`)
+    const { youtubeUrl, youtubeUrlLang } = await scrapeYoutubeVideoUrls(SCRAPED_PATH, browser, title, language)
 
     const { question, answer } = await generateFlashcard({
         title, statement, solutions, ioExamples, youtubeUrl, youtubeUrlLang
@@ -72,7 +82,7 @@ async function processProblem(browser, problemUrl, language, courseId, targetPar
 }
 
 async function updateSupermemoCard(question, answer, problemUrl) {
-    const token = await refreshToken(TOKEN_PATH, process.env.SM_USERNAME, process.env.SM_PASSWORD)
+    const token = await refreshToken(SUPERMEMO_PATH, process.env.SM_USERNAME, process.env.SM_PASSWORD)
 
     const superMemoCredentials = {
         token,
@@ -81,20 +91,22 @@ async function updateSupermemoCard(question, answer, problemUrl) {
         targetParentNumber: process.env.LEETCODE_TARGET_PARENT_NUMBER
     }
 
-    const pageNumber = readByObjectKey(SM_UPDATE_ID_PATH, problemUrl)
+    const updateIdPath = `${SUPERMEMO_PATH}/update_ids.js`
+    const pageNumber = readByObjectKey(updateIdPath, problemUrl)
     if (pageNumber) {
         await updateCard(superMemoCredentials, pageNumber, question, answer)
     } else {
         const newPageNumber = await postNewCard(superMemoCredentials, question, answer)
-        appendObjectToFile(problemUrl, newPageNumber, SM_UPDATE_ID_PATH)
+        appendObjectToFile(problemUrl, newPageNumber, updateIdPath)
     }
 }
 
 async function generateFlashcard({
     title, statement, solutions, ioExamples, youtubeUrl, youtubeUrlLang
 }) {
-    const prompt = readFileSync(`${DATA_ROOT}/promptTemplate.txt`, 'utf8');
-    const userMessage = createUserMessage({ prompt, statement, solutions, ioExamples })
+
+    const prompt = safeReadFile(`${DATA_ROOT}/promptTemplate.txt`)
+        const userMessage = createUserMessage({ prompt, statement, solutions, ioExamples })
     const gptResponse = await gptPrompt(title, prompt, userMessage)
 
     return extractQA(gptResponse, solutions, ioExamples, youtubeUrl, youtubeUrlLang)
@@ -129,8 +141,8 @@ async function extractQA(gptResponse, solutions, ioExamples, youtubeUrl, youtube
 }
 
 async function getImageHtml(title, imageDescription, imagePath) {
-    const imageName = extractFirstNumber(title)
-    const imageData = await fetchGptImage(imageDescription, imagePath)
+    const imageName = `${extractFirstNumber(title)}.jpg`
+    const imageData = await fetchGptImage(imageDescription, `${imagePath}/${imageName}`)
 
     const { imageSrc, thumbSrc } = await uploadImagesToS3(imageData, imageName, `leetcode/ai-generated`)
 
@@ -170,9 +182,9 @@ async function scrapeYoutubeVideoUrl(queryString, browser) {
     }
 }
 
-async function scrapeYoutubeVideoUrls(browser, title, language) {
+async function scrapeYoutubeVideoUrls(scrapedPath, browser, title, language) {
 
-    const youtubeUrlsPath = `${DATA_PATH}/scraped/youtubeUrls.js`
+    const youtubeUrlsPath = `${scrapedPath}/youtubeUrls.js`
     const urls = readByObjectKey(youtubeUrlsPath, title)
     if (urls) return urls
 

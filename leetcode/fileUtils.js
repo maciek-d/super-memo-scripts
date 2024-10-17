@@ -6,10 +6,10 @@ export function readCachedUrls(dataPath) {
     const premiumProblemUrlCachePath = `${dataPath}/cache/premiumProblemUrl.js`
 
     const problemUrls = existsSync(problemUrlCachePath) ?
-        JSON.parse(readFileSync(problemUrlCachePath, 'utf8')) : null
+        JSON.parse(safeReadFile(problemUrlCachePath)) : null
 
     const premiumProblemUrls = existsSync(premiumProblemUrlCachePath) ?
-        JSON.parse(readFileSync(premiumProblemUrlCachePath, 'utf8')) : null
+        JSON.parse(safeReadFile(premiumProblemUrlCachePath)) : null
 
     if (problemUrls)
         return { problemUrls, premiumProblemUrls }
@@ -21,45 +21,38 @@ export function writeCachedUrls(problemUrls, premiumProblemUrls, dataPath) {
     const problemUrlCachePath = `${dataPath}/cache/problemUrl.js`
     const premiumProblemUrlCachePath = `${dataPath}/cache/premiumProblemUrl.js`
 
-    writeFileSync(problemUrlCachePath, JSON.stringify(problemUrls), 'utf8');
-    writeFileSync(premiumProblemUrlCachePath, JSON.stringify(premiumProblemUrls), 'utf8');
+    writeFileSync(problemUrlCachePath, JSON.stringify(problemUrls));
+    writeFileSync(premiumProblemUrlCachePath, JSON.stringify(premiumProblemUrls));
 }
 
 export function isProcessed(dataPath, url) {
     const processedUrlsPath = `${dataPath}/processedUrls.js`
     const processedUrlsArray = existsSync(processedUrlsPath) ?
-        JSON.parse(readFileSync(processedUrlsPath, 'utf8')) : null
-    return (new Set(processedUrlsArray ?? [])).contains(url)
+        JSON.parse(safeReadFile(processedUrlsPath)) : null
+    return (new Set(processedUrlsArray ?? [])).has(url)
 }
 
 export function appendToProcessedUrls(dataPath, newUrl) {
     const processedUrlsPath = `${dataPath}/processedUrls.js`
     const processedUrlsArray = existsSync(processedUrlsPath) ?
-        JSON.parse(readFileSync(processedUrlsPath, 'utf8')) : null
+        JSON.parse(safeReadFile(processedUrlsPath)) : null
     const newProcessedUrlsArray = Array.from((new Set(processedUrlsArray)).add(newUrl))
-    writeFileSync(processedUrlsPath, JSON.stringify(newProcessedUrlsArray), 'utf8');
+    writeFileSync(processedUrlsPath, JSON.stringify(newProcessedUrlsArray));
 }
 
 export function readCurrentIndex(dataPath) {
     const problemIndexPath = `${dataPath}/cache/problemIndex.js`
-    if (!existsSync(problemIndexPath)) return null
-    return Number(readFileSync(problemIndexPath, "utf8"))
+    if (!existsSync(problemIndexPath)) return 0
+    return Number(safeReadFile(problemIndexPath))
 }
 
 export function readByObjectKey(path, key) {
-    try {
-        return JSON.parse(readFileSync(path, 'utf8'))?.[key]
-    } catch (e) {
-        if (e.code === 'ENOENT') { // File not found
-            return null
-        }
-        throw e
-    }
+        return JSON.parse(safeReadFile(path))?.[key]
 }
 
 export function appendObjectToFile(key, object, path) {
     const rawString = existsSync(path) ?
-        readFileSync(path, 'utf8') : "{}"
+        safeReadFile(path) : "{}"
     const objects = JSON.parse(rawString)
     objects[key] = object
     writeFileSync(path, JSON.stringify(objects, null, 2))
@@ -164,13 +157,13 @@ export async function fetchGptImage(imageDescription, filePath) {
         const url = await createImage(imageDescription)
         image = await downloadImage(url)
 
-        await writeFile(imagePath, image)
+        writeFileSync(imagePath, image)
     }
     return image
 }
 
 function readImage(imagePath) {
-    const data = readFileSync(imagePath);
+    const data = safeReadFile(imagePath);
     return Buffer.from(data);
 }
 
@@ -230,5 +223,16 @@ export function extractSection(text, sectionTitle, language) {
     return stripCodeBlocks(section.join('\n').trim(), language)
         .replaceAll("\n", "<br/>")
         .replace(/\*\*(.*?)\*\*/g, '<b>$1</b>')
+}
+
+export function safeReadFile(path) {
+    try {
+        return readFileSync(path, 'utf8')
+    } catch (e) {
+        if (e.code === 'ENOENT') { // File not found
+            return null
+        }
+        throw e
+    }
 }
 

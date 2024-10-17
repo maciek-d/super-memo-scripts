@@ -70,7 +70,7 @@ export function createUserMessage({ prompt, statement, solutions, ioExamples }) 
 
             lengthFirstComment = getSolutionsLength(solutions)
             if (solutions.length == 1) {
-                // Todo  if you ever get here first trim all comments
+                // TIP if you ever get here first trim all comments
                 // try selecting shorter solutions
                 // you can calculate the average or just sort by length
                 // you can also look into deleting repeating text from solutions

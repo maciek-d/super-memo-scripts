@@ -2,6 +2,7 @@ import axios from "axios";
 import { existsSync, readFileSync, writeFileSync } from "fs";
 
 export async function refreshToken(tokenPath, username, password) {
+    tokenPath = `${tokenPath}/token.txt`
     token = existsSync(tokenPath) ? readFileSync(tokenPath, 'utf8') : null
     if (!token || isTokenExpired(token)) {
         token = await loginToSuperMemo(username, password)
@@ -100,16 +101,15 @@ export async function postNewCard({ token, userId, courseId, targetParentNumber 
 export async function updateCard({
     userId,
     courseId,
-    pageNumber,
     token,
-    questionContent,
-    answerContent
-}) {
+}, pageNumber, question, answer) {
+
+
     const url = `https://learn.supermemo.com/api/users/${userId}/courses/${courseId}/pages/${pageNumber}?contentType=json`;
 
     const payload = {
-        question: JSON.stringify({ content: questionContent }),
-        answer: JSON.stringify({ content: answerContent })
+        question: JSON.stringify({ content: question }),
+        answer: JSON.stringify({ content: answer })
     };
 
     const headers = {

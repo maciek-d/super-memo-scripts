@@ -73,8 +73,8 @@ export async function scrapeProblemUrls(browser, tag) {
     return { problemUrls, premiumProblemUrls }
 }
 
-export async function scrapeProblem(browser, problemUrl) {
-    const problemPath = `${DATA_PATH}/scraped/problem.js`
+export async function scrapeProblem(scrapedPath, browser, problemUrl) {
+    const problemPath = `${scrapedPath}/problem.js`
     const problem = readByObjectKey(problemPath, problemUrl)
     if (problem) return problem
 
@@ -160,8 +160,8 @@ function splitDescription(description) {
     };
 }
 
-export async function scrapeSolutions(browser, language, solutionsUrl) {
-    const solutionsPath = `${DATA_PATH}/scraped/solutions.js`
+export async function scrapeSolutions(scrapedPath, browser, language, solutionsUrl) {
+    const solutionsPath = `${scrapedPath}/solutions.js`
     const solutionsFromFile = readByObjectKey(
         solutionsPath, solutionsUrl
     )
