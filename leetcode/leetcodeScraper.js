@@ -1,4 +1,34 @@
-import prettier from 'prettier';
+import { appendObjectToFile } from './fileUtils';
+
+const DEBUG_PATH = `data/puppeteer_debug`
+
+async function waitForXPathOrTimeout(page, xpath, timeout) {
+    let timeoutHandle;
+    const timeoutPromise = new Promise(resolve => {
+        timeoutHandle = setTimeout(() => resolve(false), timeout); // resolve false on timeout
+    });
+
+    const xpathFound = await Promise.race([
+        page.waitForXPath(xpath).then(() => true), // resolve true if found
+        timeoutPromise
+    ]);
+
+    clearTimeout(timeoutHandle);
+    return xpathFound;
+}
+
+async function clickUntilElementLoads(page, clickElement, xpathToWaitFor, timeoutDuration = 200) {
+    let elementFound = false
+    while (!elementFound) {
+        await clickElement.evaluate(el => el.click());
+
+        const waitForElement = page.waitForXPath(xpathToWaitFor)
+        const timeout = new Promise(resolve => setTimeout(resolve, timeoutDuration))
+        const result = await Promise.race([waitForElement, timeout])
+
+        elementFound = Boolean(result)
+    }
+}
 
 export async function scrapeProblemUrls(browser, tag) {
     const url = `https://leetcode.com/tag/${tag}/`;
@@ -44,6 +74,10 @@ export async function scrapeProblemUrls(browser, tag) {
 }
 
 export async function scrapeProblem(browser, problemUrl) {
+    const problemPath = `${DATA_PATH}/scraped/problem.js`
+    const problem = readByObjectKey(problemPath, problemUrl)
+    if (problem) return problem
+
     const page = await browser.newPage();
     await page.goto(problemUrl, { waitUntil: 'domcontentloaded' });
 
@@ -59,30 +93,59 @@ export async function scrapeProblem(browser, problemUrl) {
 
         // Find the description
         const descriptionElement = document.querySelector('div[data-track-load="description_content"]');
-        const description = descriptionElement ? descriptionElement.innerText.trim() : '';
-        const htmlDescription = descriptionElement ? descriptionElement.innerHTML : '';
+
+        const description = descriptionElement ? getTextWithImageTags(descriptionElement) : ''
+        const htmlDescription = descriptionElement ? descriptionElement.innerHTML : ''
 
         return { title, description, htmlDescription };
     }, urlPart);
 
     await page.close();
-    const { statement, examples, constraints } = splitDescription(description)
-    // TODO this might be the right place to extract image html while keeping them in correct order
+    const { statement, ioExamples, constraints } = splitDescription(description)
 
-    return { statement, examples, constraints }
+    appendObjectToFile(problemUrl,
+        { title, statement, ioExamples, constraints, htmlDescription }, problemPath)
+    return { title, statement, ioExamples, constraints, htmlDescription }
 }
+
+function getTextWithImageTags(element) {
+    if (!element) return '';
+
+    const TEXT_NODE = 3;
+    const ELEMENT_NODE = 1;
+
+    return Array.from(element.childNodes)
+        .map(node => {
+            if (node.nodeType === TEXT_NODE) {
+                return node.textContent.trim();
+            }
+            if (
+                node.nodeType === ELEMENT_NODE &&
+                !["avatar", "badges", "static_assets"].some(val => node.src.includes(val))
+            ) {
+                if (node.tagName === 'IMG') {
+                    return node.outerHTML;
+                }
+                // Recursively process child elements for nested tags
+                return getTextWithImageTags(node);
+            }
+            return ''; // Skip other node types
+        })
+        .join('');
+}
+
 
 function splitDescription(description) {
     const exampleIndex = description.indexOf('Example');
     const constraintsIndex = description.indexOf('Constraints:');
 
     let statement = description;
-    let examples = '';
+    let ioExamples = '';
     let constraints = '';
 
     if (exampleIndex !== -1) {
         statement = description.substring(0, exampleIndex);
-        examples = constraintsIndex === -1 ? description.substring(exampleIndex)
+        ioExamples = constraintsIndex === -1 ? description.substring(exampleIndex)
             : description.substring(exampleIndex, constraintsIndex);
     }
 
@@ -92,169 +155,18 @@ function splitDescription(description) {
 
     return {
         statement,
-        examples,
+        ioExamples,
         constraints
     };
 }
 
-export async function scrapeSolution(browser, solutionUrl, language) {
-    const page = await browser.newPage();
-    await page.goto(solutionUrl, { waitUntil: 'domcontentloaded' });
-
-    await selectLanguage(page)
-    await selectByVotes(page)
-
-    // Extract the solution in HTML and text format
-    const { htmlSolution, textSolution } = await extractSolutionFromBlocks(page, language, solutionUrl)
-    await page.close();
-    return { htmlSolution, textSolution };
-}
-
-async function selectLanguage(page) {
-    await page.waitForSelector('svg path[d="M20 8l-8 8-8-8"]');
-
-    // Once the SVG element is available, select its parent div and click
-    const svgParentDiv = await page.$('div.absolute.right-4.top-0 svg path[d="M20 8l-8 8-8-8"]');
-    await svgParentDiv.click();
-
-    const languageFound = await waitForXPathOrTimeout(page, `//span[contains(., '${language}')]`, 2000);
-    if (!languageFound) {
-        console.error(`${language} Solution not found: ${solutionUrl}`);
-        page.close();
-        return { solutionLink: "", htmlSolution: "", textSolution: "" };
-    }
-
-    let [languageButton] = await page.$x(`//span[contains(., '${language}')]`);
-
-    const languageNotSelected = await page.evaluate(element => {
-        return element.classList.contains('bg-lc-fill-02') && element.classList.contains('text-lc-text-secondary');
-    }, languageButton);
-    await page.waitForTimeout(20);
-    if (languageNotSelected) {
-        await languageButton.click();
-    }
-    await svgParentDiv.click();
-}
-
-async function selectByVotes(page) {
-    const votesButtonXPath = "//button[contains(text(), 'Votes')]";
-    const votesButton = await page.$x(votesButtonXPath);
-
-    if (votesButton.length === 0) {
-        await page.waitForXPath("//button[contains(text(), 'Sort by')]", { visible: true });
-        let [sortByButton] = await page.$x("//button[contains(text(), 'Sort by')]");
-        await page.evaluate(element => {
-            element.style.border = "2px solid red"; // Add your desired border style
-        }, sortByButton);
-        await page.waitForTimeout(2000);
-        await sortByButton.click();
-
-        // // Wait for dropdown to appear and content to load
-        const mostVotesXPath = "//div[contains(text(), 'Most Votes')]";
-        await page.waitForXPath(mostVotesXPath);
-
-        // After waiting, find and click the 'Most Votes' option
-        const mostVotesOption = await page.$x(mostVotesXPath);
-        await mostVotesOption[0].click();
-    }
-    await page.waitForTimeout(2000);
-    await page.waitForSelector('div.group:first-of-type');
-}
-
-async function extractSolutionFromBlocks(page, language, solutionUrl) {
-    const allLanguages = [
-        "JavaScript", "C++", "Java", "Python3", "Python", "C", "C#", "Ruby", "Swift",
-        "Go", "Scala", "Kotlin", "Rust", "MySQL", "Bash", "TypeScript", "Dart",
-        "Erlang", "Elixir", "PHP", "Racket"
-    ]
-
-    const otherLanguages = allLanguages.filter(lang => lang != language)
-    const solutionBlocks = await page.$$('.group.flex.w-full.cursor-pointer.flex-col');
-
-    for (const block of solutionBlocks) {
-        const languages = await block.$$eval('.whitespace-nowrap', nodes => nodes.map(n => n.textContent.trim()));
-
-        if (!otherLanguages.some(lang => languages.includes(lang))) {
-            const solutionUrlElement = await block.$('a[href*="/problems/"]');
-
-            if (solutionUrlElement) {
-                // Ensure the link opens in the same tab
-                await page.evaluate(el => el.target = '_self', solutionUrlElement);
-
-                // Click on the solution link
-                await Promise.allSettled([
-                    page.waitForNavigation({ waitUntil: 'networkidle0' }),
-                    solutionUrlElement.click()
-                ]);
-                await page.waitForSelector('div.break-words'); // Wait for the solution content to load
-                await page.waitForFunction('document.readyState === "complete"');
-
-                // Extract the solution URL, HTML and text content
-                const solutionUrl = await page.url();
-                const htmlSolution = await page.$eval('div.break-words', div => div.innerHTML);
-                const { lastDivSolutionText, firstDivSolutionText } = await page.$eval('div.break-words', div => {
-                    // Function to recursively find the last element with a class starting with 'language-'
-                    const findLastLanguageElement = (element) => {
-                        const children = Array.from(element.children);
-                        let lastLanguageElement = null;
-
-                        for (const child of children) {
-                            if (typeof child.className === 'string' && child.className.startsWith('language-')) {
-                                lastLanguageElement = child; // Update if a new match is found
-                            }
-                            // Recursively check child elements
-                            const nestedLanguageElement = findLastLanguageElement(child);
-                            if (nestedLanguageElement) {
-                                lastLanguageElement = nestedLanguageElement;
-                            }
-                        }
-
-                        return lastLanguageElement;
-                    };
-
-                    // Start the recursive search from 'div.break-words'
-                    const lastJsCodeElement = findLastLanguageElement(div);
-                    const lastDivSolutionText = lastJsCodeElement?.innerText ?? "";
-                    const firstDiv = div.querySelector('[class^="language-"]');
-                    const firstDivSolutionText = firstDiv?.innerText ?? "";
-
-                    // Return the inner text of the found element or empty string if not found
-                    return { lastDivSolutionText, firstDivSolutionText };
-                });
-
-                let textSolution = '';
-                try {
-                    await prettier.format(lastDivSolutionText, {
-                        semi: false,
-                        parser: "babel"
-                    });
-                    textSolution = lastDivSolutionText;
-                } catch (error) {
-                    try {
-                        await prettier.format(firstDivSolutionText, {
-                            semi: false,
-                            parser: "babel"
-                        });
-                        textSolution = firstDivSolutionText;
-                    } catch (error) {
-                        console.error(`Skipping solution find it manually: ${solutionUrl}`);
-                        return { htmlSolution, textSolution };
-                    }
-                }
-                if (textSolution) {
-                    await page.close();
-                    console.log(`Solution found for: ${solutionUrl}`);
-                    return { htmlSolution, textSolution };
-                }
-
-            }
-        }
-    }
-    console.error(`No solution found for: ${solutionUrl}`);
-    return { htmlSolution: '', textSolution: '' };
-}
-
 export async function scrapeSolutions(browser, language, solutionsUrl) {
+    const solutionsPath = `${DATA_PATH}/scraped/solutions.js`
+    const solutionsFromFile = readByObjectKey(
+        solutionsPath, solutionsUrl
+    )
+    if (solutionsFromFile) return solutionsFromFile
+
     const page = await browser.newPage();
     await page.goto(solutionsUrl, { waitUntil: 'domcontentloaded' });
 
@@ -263,39 +175,201 @@ export async function scrapeSolutions(browser, language, solutionsUrl) {
 
     // wait for tag select svg arrow.
     await page.waitForSelector('div.absolute.right-4.top-0 svg path[d="M20 8l-8 8-8-8"]', { visible: true });
-    await page.screenshot({ path: 'data/debug/svg_arrow.png' });
+    await page.screenshot({ path: `${DEBUG_PATH}/svg_arrow.png` });
     const svgArrow = await page.$('div.absolute.right-4.top-0 svg path[d="M20 8l-8 8-8-8"]');
 
     const svgParentDiv = await svgArrow.evaluateHandle(el => el.closest('div.cursor-pointer'))
 
-    await page.screenshot({ path: 'data/debug/firstTimeout.png' });
+    await page.screenshot({ path: `${DEBUG_PATH}/firstTimeout.png` });
     await svgParentDiv.evaluate(el => el.click());
-    await page.screenshot({ path: 'data/debug/clickLanguageArrow.png' });
+    await page.screenshot({ path: `${DEBUG_PATH}/clickLanguageArrow.png` });
 
-    // wait for select js solutions tag only
+    // wait for select specific language solutions tag only
     const languageFound = await waitForXPathOrTimeout(page, `//span[contains(., '${language}')]`, 2000);
     if (!languageFound) {
         console.error(`${language} Solution not found: ${solutionsUrl}`);
         page.close();
-        return { solutions: [], solutionsUrls: [] }
+        return {}
     }
 
-    // select js only unless already selected
-    await selectJavascriptSolutions(page)
-    await page.screenshot({ path: `data/debug/select${language}.png` });
+    // select specific language only unless already selected
+    await selectLanguageSolutions(page)
+    await page.screenshot({ path: `${DEBUG_PATH}/select${language}.png` });
 
     // minimize tag select
     await svgParentDiv.evaluate(el => el.click());
-    await page.screenshot({ path: 'data/debug/hideSelection.png' });
+    await page.screenshot({ path: `${DEBUG_PATH}/hideSelection.png` });
     await sortByVotes(page);
 
-    const { solutions, solutionsUrls } = await fetchSolutionsHtml(browser, page)
-    if (!solutions || !solutionsUrls ||
-        solutions.length < 2 || solutionsUrls.length < 2
-    ) {
-        throw new Error(
-            `Failed to fetch leetcode solutions ${solutions} ${solutionsUrls}`
-        )
+    const solutions = await scrapeSolutionsFromPage(browser, page)
+    if (!solutions) {
+        throw new Error(`Failed to fetch leetcode solutions ${solutionsUrl}`)
     }
-    return { solutions, solutionsUrls }
+
+    appendObjectToFile(solutionsUrl, solutions, solutionsPath)
+    return solutions
 }
+
+async function sortByVotes(page) {
+    const votesButtonXPath = "//button[contains(text(), 'Votes')]";
+    const votesButton = await page.$x(votesButtonXPath);
+
+    if (votesButton.length === 0) {
+        await page.waitForXPath("//button[contains(text(), 'Sort by')]", { visible: true })
+        let [sortByButton] = await page.$x("//button[contains(text(), 'Sort by')]")
+
+        await page.evaluate(element => {
+            element.style.border = "2px solid red" // Add your desired border style
+        }, sortByButton)
+        await page.screenshot({ path: `${DEBUG_PATH}/redVotesHighlight.png` });
+
+        const contentSelector = 'div.group.flex.w-full.cursor-pointer.flex-col'
+        await page.waitForSelector(contentSelector, { visible: true })
+
+        const mostVotesXPath = "//div[contains(text(), 'Most Votes')]"
+
+        // Wait for dropdown to appear and content to load
+        await clickUntilElementLoads(page, sortByButton, mostVotesXPath)
+
+        // After waiting, find and click the 'Most Votes' option
+        const mostVotesOption = await page.$x(mostVotesXPath)
+        await mostVotesOption[0].evaluate(el => el.click());
+        await page.screenshot({ path: `${DEBUG_PATH}/mostVotesOption.png` });
+
+        const solutionsSelector = 'div.relative.flex.w-full.flex-col > div.flex.w-full.flex-col'
+        await waitForElementChange(page, solutionsSelector, 4000)
+        await page.screenshot({ path: `${DEBUG_PATH}/solutionsLoaded.png` });
+    }
+    // Wait for content to load appropriate order
+    await page.waitForSelector('div.group:first-of-type')
+}
+
+async function selectLanguageSolutions(page, language) {
+    let [languageButton] = await page.$x(`//span[contains(., '${language}')]`);
+
+    const noLanguageFound = await page.evaluate(element => {
+        return element.classList.contains('bg-lc-fill-02') && element.classList.contains('text-lc-text-secondary');
+    }, languageButton);
+    await page.waitForTimeout(500);
+    if (noLanguageFound) {
+        await languageButton.evaluate(el => el.click());
+        await page.waitForTimeout(4000)
+    }
+}
+
+async function scrapeSolutionsFromPage(browser, page, language) {
+    const solutionBlocks = await page.$$('.group.flex.w-full.cursor-pointer.flex-col');
+
+    const solutions = {}
+
+    const GET_SOLUTIONS_AMOUNT = 5
+    for (const [index, block] of solutionBlocks.entries()) {
+
+        if (index === GET_SOLUTIONS_AMOUNT) { break }
+
+        const solutionPage = await loadNextSolution(browser, block);
+        if (!solutionPage) continue;
+
+        await switchToLangugageCodeBlocks(solutionPage, language)
+
+        const solutionText = await extractTextExludingDifferentLanguages(solutionPage, language)
+        const solutionUrl = await solutionPage.url();
+
+        solutions[solutionUrl] = solutionText
+        await solutionPage.close();
+    }
+
+    return solutions
+}
+
+async function extractTextExludingDifferentLanguages(page, language) {
+    const commentsAndSolutionHtml = await processCommentsAndSolution(page);
+    const allLanguages = [
+        'JavaScript', 'C', 'C++', 'Java', 'Python', 'C#', 'Ruby',
+        'Swift', 'Go', 'Kotlin', 'Scala', 'Rust',
+        'PHP', 'TypeScript', 'Racket', 'Erlang', 'SQL'
+    ]
+    const allOtherLanguages = allLanguages.filter(lang => lang != language)
+    const cleanedHTML = await stripNonLanguageCodeElements(commentsAndSolutionHtml, allOtherLanguages);
+    const textContent = await preserveTextAndImages(cleanedHTML)
+
+    return textContent;
+}
+
+// Note if this fails look at extractImageTags in old_main.js
+async function preserveTextAndImages(cleanedHTML) {
+    const jsdom = await import('jsdom');
+    const { JSDOM } = jsdom;
+    const dom = new JSDOM(cleanedHTML);
+    const document = dom.window.document;
+
+    const textContent = getTextWithImageTags(document.body)
+
+    const endOfUsefulTextRegex = new RegExp(`Saved Ln 1, Col 1 You need to.*`, 's');
+    return textContent
+        .replace(/\/\*\*([\s\S]*?)(@param|@return)([\s\S]*?)\*\//g, '')
+        .replace(endOfUsefulTextRegex, '')
+        .trim();
+}
+
+async function stripNonLanguageCodeElements(htmlContent, languagesToRemove) {
+    const jsdom = await import('jsdom');
+    const { JSDOM } = jsdom;
+    const dom = new JSDOM(htmlContent);
+    const document = dom.window.document;
+
+    // Remove script button tags
+    document.querySelectorAll('script').forEach(script => script.remove());
+    document.querySelectorAll('button').forEach(button => button.remove());
+
+    // Remove elements with inline style visibility: hidden or display: none
+    document.querySelectorAll('[style*="visibility: hidden"], [style*="display: none"]').forEach(element => element.remove());
+
+    // Remove next and previous solution elements
+    document.querySelectorAll('.flex.justify-between.gap-4').forEach(element => element.remove());
+
+    // Remove elements with specific class names
+    document.querySelectorAll(
+        '.code_tabbar_outer, .testcase_tabbar_outer, .z-nav-1, .flexlayout__tabset_tabbar_outer_top, #ide-top-btns, .hidden'
+    ).forEach(element => element.remove());
+
+    // removes only from comments
+    document.querySelectorAll('.mt-4.flex-1 code').forEach(code => {
+        // Check if the code block's language should lead to removal
+        if (languagesToRemove.some(lang => code.className.includes(`language-${lang.toLowerCase()}`))) {
+            let commentDiv = code // up 4 levels
+                .parentNode.parentNode.parentNode.parentNode
+            if (commentDiv) {
+                commentDiv.remove(); // Remove the great-grandparent div of the code element
+            }
+        }
+    });
+
+    return document.body.innerHTML; // Return the modified HTML of the element
+}
+
+async function switchToLangugageCodeBlocks(page, language) {
+    const langOptionXPath = `//div[contains(@class, 'flex') and contains(@class, 'select-none')]/div[contains(text(), '${language}')]`
+    const langOptions = await page.$x(langOptionXPath)
+
+    for (const [i, option] of langOptions.entries()) {
+        try {
+            // Ensure the element is visible before clicking
+            await page.evaluate((el) => {
+                el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+            }, option)
+
+            await page.evaluate(element => {
+                element.style.border = "2px solid red" // Add your desired border style
+            }, option)
+
+            await page.screenshot({ path: `${DEBUG_PATH}/langOption${i}.png` });
+            await option.evaluate(el => el.click())
+            await page.waitForTimeout(500)
+            await page.screenshot({ path: `${DEBUG_PATH}/langOptionSelected${i}.png` });
+        } catch (error) {
+            console.error(`Error clicking on ${language}Option option:`, error);
+        }
+    }
+}
+

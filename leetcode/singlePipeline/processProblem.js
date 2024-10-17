@@ -14,9 +14,6 @@ const newPath = path.join(__dirname, `../../data/CS/leetcode/new/${TAG}_problems
 
 const htmlPath = path.join(__dirname, '../../data/CS/leetcode/html');
 
-
-
-
 const htmlDataPath = path.join(htmlPath, 'all_problems_html.json');
 let allHtmlData = existsSync(htmlDataPath) ? JSON.parse(readFileSync(htmlDataPath, 'utf8')) : [];
 
@@ -48,10 +45,8 @@ const processHtmlContent = (htmlContent) => {
         return match.startsWith('<img') ? match : '';
     });
 
-
     return cleanedContent; // Serialize the document to get the updated HTML content
 };
-
 
 const saveHtmlData = (title, problemHtml, solutionHtml) => {
     if (!existsSync(htmlPath)) {
