@@ -1,4 +1,4 @@
-import { appendObjectToFile, readByObjectKey } from './fileUtils.js'
+import { appendObjectToFile, readByObjectKey, splitDescription } from './fileUtils.js'
 
 const DEBUG_PATH = `data/puppeteer_debug`
 
@@ -108,11 +108,11 @@ export async function scrapeProblem(scrapedPath, browser, problemUrl) {
     }, urlPart, getTextWithImageTagsStr);
 
     await page.close();
-    const { statement, ioExamples, constraints } = splitDescription(description)
 
+    const descriptionSections = splitDescription(description)
     appendObjectToFile(problemUrl,
-        { title, statement, ioExamples, constraints, htmlDescription }, problemPath)
-    return { title, statement, ioExamples, constraints, htmlDescription }
+        { title, ...descriptionSections, htmlDescription }, problemPath)
+    return { title, descriptionSections }
 }
 
 function getTextWithImageTags(element) {
@@ -138,31 +138,6 @@ function getTextWithImageTags(element) {
             return ''; // Skip other node types
         })
         .join('');
-}
-
-function splitDescription(description) {
-    const exampleIndex = description.indexOf('Example');
-    const constraintsIndex = description.indexOf('Constraints:');
-
-    let statement = description;
-    let ioExamples = '';
-    let constraints = '';
-
-    if (exampleIndex !== -1) {
-        statement = description.substring(0, exampleIndex);
-        ioExamples = constraintsIndex === -1 ? description.substring(exampleIndex)
-            : description.substring(exampleIndex, constraintsIndex);
-    }
-
-    if (constraintsIndex !== -1) {
-        constraints = description.substring(constraintsIndex + 'Constraints:'.length);
-    }
-
-    return {
-        statement,
-        ioExamples,
-        constraints
-    };
 }
 
 export async function scrapeSolutions(scrapedPath, browser, language, solutionsUrl) {
@@ -288,7 +263,7 @@ async function scrapeSolutionsFromPage(browser, page, language) {
 }
 
 async function extractTextExludingDifferentLanguages(page, language) {
-    const commentsAndSolutionHtml = await processCommentsAndSolution(page);
+    const commentsAndSolutionHtml = await processCommentsAndSolution(page, language);
     const allLanguages = [
         'JavaScript', 'C', 'C++', 'Java', 'Python', 'C#', 'Ruby',
         'Swift', 'Go', 'Kotlin', 'Scala', 'Rust',
@@ -301,7 +276,6 @@ async function extractTextExludingDifferentLanguages(page, language) {
     return textContent;
 }
 
-// Note if this fails look at extractImageTags in old_main.js
 async function preserveTextAndImages(cleanedHTML) {
     const jsdom = await import('jsdom');
     const { JSDOM } = jsdom;
@@ -429,7 +403,7 @@ async function loadNextSolution(browser, block) {
     return solutionPage
 }
 
-async function processCommentsAndSolution(page) {
+async function processCommentsAndSolution(page, language) {
 
     page.on('console', msg => console.log(msg.text()));
 
@@ -443,7 +417,7 @@ async function processCommentsAndSolution(page) {
         return await page.evaluate(() => document.body.outerHTML)
     }
 
-    const commentsAndSolutionHtml = await page.evaluate(async () => {
+    const commentsAndSolutionHtml = await page.evaluate(async (language) => {
 
         const solutionSelector =
             'div.relative.flex.w-full.flex-1.flex-col.overflow-y-auto > div.mx-auto.w-full'
@@ -461,22 +435,22 @@ async function processCommentsAndSolution(page) {
 
         for (const commentBlock of comments) {
             const codeBlocks = commentBlock.querySelectorAll('code.language');
-            let containsJavaScript = false;
+            let containsLanguage = false;
 
             codeBlocks.forEach(code => {
-                if (code.classList.contains('language-javascript')) {
-                    containsJavaScript = true;
+                if (code.classList.contains(`language-${language.toLowerCase()}`)) {
+                    containsLanguage = true;
                 }
             });
             // If the comment contains a code block that is not JavaScript, remove the entire comment block
-            if (codeBlocks.length > 0 && !containsJavaScript) {
+            if (codeBlocks.length > 0 && !containsLanguage) {
                 commentBlock.remove();
             }
         }
 
         // Return the HTML of the processed container
         return solutionAndCommentsContainer.outerHTML
-    });
+    }, language);
 
     return commentsAndSolutionHtml
 }

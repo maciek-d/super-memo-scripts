@@ -1,9 +1,9 @@
 
 import {
     appendObjectToFile, appendToProcessedUrls, isProcessed,
-    gptPrompt, readCachedUrls, writeCachedUrls, extractFirstNumber,
+    gptPrompt as gptRequest, readCachedUrls, writeCachedUrls, extractFirstNumber,
     fetchGptImage, extractDataFromGptResponse, readByObjectKey,
-    readCurrentIndex, safeReadFile
+    splitDescription
 } from './fileUtils.js';
 
 import { scrapeProblem, scrapeSolutions } from './leetcodeScraper.js';
@@ -22,6 +22,7 @@ import puppeteer from 'puppeteer-extra';
 puppeteer.use(StealthPlugin());
 
 import { config } from 'dotenv';
+import { readFileSync } from 'fs';
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const envPath = join(__dirname, '../.env')
 config({ path: envPath })
@@ -96,54 +97,46 @@ function getCurrentIndex(problemUrls) {
 // TODO test with problem with images and solution with images
 
 async function processProblem(browser, problemUrl, language) {
-    const { title, statement, ioExamples, constraints } = await scrapeProblem(SCRAPED_PATH, browser, problemUrl)
-    const solutions = await scrapeSolutions(SCRAPED_PATH, browser, language, `${problemUrl}/solutions/`)
-    const { youtubeUrl, youtubeUrlLang } = await scrapeYoutubeVideoUrls(browser, SCRAPED_PATH, title, language)
-
-    const { question, answer } = await generateFlashcard({
-        title, problemUrl, statement, solutions, ioExamples, youtubeUrl, youtubeUrlLang, constraints
-    })
-
+    const { question, answer } =
+        await generateFlashcard({ browser, problemUrl, language })
     await updateSupermemoCard(SUPERMEMO_PATH, question + "updated", answer, problemUrl)
 }
 
-async function generateFlashcard({
-    title, problemUrl, statement, solutions, ioExamples, youtubeUrl, youtubeUrlLang, constraints
-}) {
-    const systemPrompt = safeReadFile(`data/systemPrompt.txt`)
+async function generateFlashcard({ browser, problemUrl, language }) {
+    const { title, descriptionSections } = await scrapeProblem(SCRAPED_PATH, browser, problemUrl)
+    const solutions = await scrapeSolutions(SCRAPED_PATH, browser, language, `${problemUrl}/solutions/`)
 
-    const userMessage = createUserMessage({ systemPrompt, statement, solutions, ioExamples })
-    const gptResponse = await gptPrompt({ title, systemPrompt, userMessage, dataPath: DATA_PATH })
+    const gptResponse = await promptGpt({ title, descriptionSections })
 
-    return extractQA({ title, problemUrl, gptResponse, solutions, ioExamples, youtubeUrl, youtubeUrlLang, constraints })
-}
-
-async function extractQA({ title, problemUrl, gptResponse, solutions, ioExamples, youtubeUrl, youtubeUrlLang, constraints }) {
-
-    const language = LANGUAGE
-    const {
-        imageDescription, solutionsUrl1, solutionsUrl2,
-        summary, description, bestIoExample,
-        algorithm, datastructure, code, code2, steps, steps2,
-        solution, solution2, complexity
-    } = extractDataFromGptResponse(gptResponse, solutions, language)
-
+    const imageDescription = extractSection(response, "Image Description", language)
     const imageHtml = await getImageHtml(title, imageDescription, IMAGE_PATH)
+    const youtubeUrls = await scrapeYoutubeVideoUrls(browser, SCRAPED_PATH, title, language)
+
+    const solutionUrls = extractSolutions(solutions)
     const question = questionTemplate({
-        summary, description, bestIoExample,
-        title, youtubeUrl, youtubeUrlLang,
-        solutionsUrl1, solutionsUrl2,
-        constraints, ioExamples,
-        problemUrl, imageHtml
+        title,
+        problemUrl,
+        youtubeUrls,
+        solutionUrls,
+        imageHtml,
+        descriptionSections
     })
 
     const answer = extractAnswer({
-        algorithm, datastructure, code, code2, steps, steps2,
-        solution, solution2, complexity,
-        solutionsUrl1, solutionsUrl2,
+        solutionUrls,
+        gptResponse,
+        language
     })
 
     return { question, answer }
+}
+
+async function promptGpt({ title, descriptionSections }) {
+    const systemPrompt = readFileSync(`data/systemPrompt.txt`)
+    const { statement, ioExamples } = descriptionSections
+    const userMessage = createUserMessage({ systemPrompt, statement, solutions, ioExamples })
+    const gptResponse = await gptRequest({ title, systemPrompt, userMessage, dataPath: DATA_PATH })
+    return gptResponse
 }
 
 async function getImageHtml(title, imageDescription, imagePath) {

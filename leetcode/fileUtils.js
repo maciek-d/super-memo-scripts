@@ -40,12 +40,6 @@ export function appendToProcessedUrls(dataPath, newUrl) {
     writeFileSync(processedUrlsPath, JSON.stringify(newProcessedUrlsArray));
 }
 
-export function readCurrentIndex(dataPath) {
-    const problemIndexPath = `${dataPath}/cache/problemIndex.js`
-    if (!existsSync(problemIndexPath)) return 0
-    return Number(safeReadFile(problemIndexPath))
-}
-
 export function readByObjectKey(path, key) {
     return JSON.parse(safeReadFile(path))?.[key]
 }
@@ -68,8 +62,36 @@ export async function gptPrompt({
     return response
 }
 
+export function extractSolutions(solutions) {
+    const [gptSolutionIndex, gptSolutionIndex2] = extractProblemIndex(response)
+    const keys = Object.keys(solutions);
+    const solutionsUrl1 = solutions[keys[gptSolutionIndex]];
+    const solutionsUrl2 = solutions[keys[gptSolutionIndex2]];
+
+    if (!solutionsUrl1 || !solutionsUrl2) {
+        throw new Error(
+            `Failed to get solutionsUrls ${solutionsUrl1} ${solutionsUrl2}`
+        )
+    }
+    return { solutionsUrl1, solutionsUrl2 }
+}
+export function extractQuestionFileds(response, solutions, language) {
+
+    response = response
+        .replaceAll("&lt;", "＜")
+        .replaceAll("&gt;", "＞")
+        .replace(/<(?!img|\/img)/gi, '＜')
+    const bestIoExample = extractSection(response, "I\/O", language)
+
+
+
+    return {
+        solutionsUrl1, solutionsUrl2,
+        summary, description, bestIoExample,
+    }
+}
+
 export function extractDataFromGptResponse(response, solutions, language) {
-    const imageDescription = extractSection(response, "Image Description", language)
     const [gptSolutionIndex, gptSolutionIndex2] = extractProblemIndex(response)
     const keys = Object.keys(solutions);
     const solutionsUrl1 = solutions[keys[gptSolutionIndex]];
@@ -242,3 +264,27 @@ export function safeReadFile(path) {
     }
 }
 
+export function splitDescription(description) {
+    const exampleIndex = description.indexOf('Example');
+    const constraintsIndex = description.indexOf('Constraints:');
+
+    let statement = description;
+    let ioExamples = '';
+    let constraints = '';
+
+    if (exampleIndex !== -1) {
+        statement = description.substring(0, exampleIndex);
+        ioExamples = constraintsIndex === -1 ? description.substring(exampleIndex)
+            : description.substring(exampleIndex, constraintsIndex);
+    }
+
+    if (constraintsIndex !== -1) {
+        constraints = description.substring(constraintsIndex + 'Constraints:'.length);
+    }
+
+    return {
+        statement,
+        ioExamples,
+        constraints
+    };
+}

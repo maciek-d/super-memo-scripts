@@ -1,10 +1,15 @@
+import { extractSolutions } from "./fileUtils";
+
 export function extractAnswer({
-    solutionsUrl1, solutionsUrl2,
-    algorithm, complexity,
-    solution2, solution,
-    steps2, steps, code2, code,
-    datastructure
+    solutionUrls,
+    gptResponse,
+    language
 }) {
+    const { solutionsUrl1, solutionsUrl2 } = solutionUrls
+    const {
+        algorithm, datastructure, code, code2, steps, steps2,
+        solution, solution2, complexity
+    } = extractAnswerSections(gptResponse, language)
     // Extract sections from response
     const DAS = algorithm + " - " + datastructure
 
@@ -33,13 +38,17 @@ export const extractFirstNumber = (str) => {
 export function questionTemplate({
     title,
     problemUrl,
-    youtubeUrl, youtubeUrlLang,
-    solutionsUrl1, solutionsUrl2,
-    ioExamples, constraints, summary, description, bestIoExample,
-    imageHtml
+    youtubeUrls,
+    solutionUrls,
+    imageHtml,
+    descriptionSections
 }) {
-    // TODO instead of passing all of these in pass in description only then extract everything here
+    const { solutionsUrl1, solutionsUrl2 } = solutionUrls
 
+    let { summary, description, bestIoExample } = extractQuestionFileds(gptResponse, language)
+
+    const { youtubeUrl, youtubeUrlLang } = youtubeUrls
+    let { ioExamples, constraints } = descriptionSections
     ioExamples = modifyImagesInPlace(ioExamples)
     bestIoExample = modifyImagesInPlace(bestIoExample)
     summary = modifyImagesInPlace(summary)
