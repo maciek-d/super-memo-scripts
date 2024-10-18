@@ -52,7 +52,7 @@ export function appendObjectToFile(key, object, path) {
     writeFileSync(path, JSON.stringify(objects, null, 2))
 }
 
-export async function gptPrompt({
+export async function gptRequest({
     title, systemPrompt, userMessage, dataPath
 }) {
     const response = readByObjectKey(`${dataPath}/gptResponses.js`, title) ??
@@ -62,7 +62,7 @@ export async function gptPrompt({
     return response
 }
 
-export function extractSolutions(solutions) {
+export function extractSolutions(response, solutions) {
     const [gptSolutionIndex, gptSolutionIndex2] = extractProblemIndex(response)
     const keys = Object.keys(solutions);
     const solutionsUrl1 = solutions[keys[gptSolutionIndex]];
@@ -75,42 +75,28 @@ export function extractSolutions(solutions) {
     }
     return { solutionsUrl1, solutionsUrl2 }
 }
-export function extractQuestionFileds(response, solutions, language) {
 
+export function extractQuestionSections(response, language) {
     response = response
         .replaceAll("&lt;", "＜")
         .replaceAll("&gt;", "＞")
         .replace(/<(?!img|\/img)/gi, '＜')
+    const summary = extractSection(response, "Summary", language)
+    const description = extractSection(response, "Description", language)
     const bestIoExample = extractSection(response, "I\/O", language)
 
-
-
     return {
-        solutionsUrl1, solutionsUrl2,
         summary, description, bestIoExample,
     }
 }
 
-export function extractDataFromGptResponse(response, solutions, language) {
-    const [gptSolutionIndex, gptSolutionIndex2] = extractProblemIndex(response)
-    const keys = Object.keys(solutions);
-    const solutionsUrl1 = solutions[keys[gptSolutionIndex]];
-    const solutionsUrl2 = solutions[keys[gptSolutionIndex2]];
-
-    if (!solutionsUrl1 || !solutionsUrl2) {
-        throw new Error(
-            `Failed to get solutionsUrls ${solutionsUrl1} ${solutionsUrl2}`
-        )
-    }
+export function extractAnswerSections(response, language) {
 
     response = response
         .replaceAll("&lt;", "＜")
         .replaceAll("&gt;", "＞")
         .replace(/<(?!img|\/img)/gi, '＜')
 
-    const summary = extractSection(response, "Summary", language)
-    const description = extractSection(response, "Description", language)
-    const bestIoExample = extractSection(response, "I\/O", language)
 
     const algorithm = extractSection(response, "Problem Algorithm", language)
     const datastructure = extractSection(response, "Problem Datastructure", language)
@@ -123,8 +109,6 @@ export function extractDataFromGptResponse(response, solutions, language) {
     const complexity = extractSection(response, "Time Complexity", language);
 
     return {
-        imageDescription, solutionsUrl1, solutionsUrl2,
-        summary, description, bestIoExample,
         algorithm, datastructure, code, code2, steps, steps2,
         solution, solution2, complexity
     }

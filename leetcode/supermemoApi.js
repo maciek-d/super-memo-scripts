@@ -144,7 +144,6 @@ export async function updateSupermemoCard(supermemoPath, question, answer, probl
 
     const updateIdPath = `${supermemoPath}/update_ids.js`
     const pageNumber = readByObjectKey(updateIdPath, problemUrl)
-    console.log({ pageNumber })
     if (pageNumber) {
         await updateCard(superMemoCredentials, pageNumber, question, answer)
     } else {

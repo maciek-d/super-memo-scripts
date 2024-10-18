@@ -1,4 +1,4 @@
-import { extractSolutions } from "./fileUtils";
+import { extractAnswerSections } from "./fileUtils.js";
 
 export function extractAnswer({
     solutionUrls,
@@ -41,11 +41,12 @@ export function questionTemplate({
     youtubeUrls,
     solutionUrls,
     imageHtml,
-    descriptionSections
+    descriptionSections,
+    questionSections
 }) {
     const { solutionsUrl1, solutionsUrl2 } = solutionUrls
 
-    let { summary, description, bestIoExample } = extractQuestionFileds(gptResponse, language)
+    let { summary, description, bestIoExample } = questionSections
 
     const { youtubeUrl, youtubeUrlLang } = youtubeUrls
     let { ioExamples, constraints } = descriptionSections

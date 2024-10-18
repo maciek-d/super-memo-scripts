@@ -1,9 +1,10 @@
-
 import {
     appendObjectToFile, appendToProcessedUrls, isProcessed,
-    gptPrompt as gptRequest, readCachedUrls, writeCachedUrls, extractFirstNumber,
-    fetchGptImage, extractDataFromGptResponse, readByObjectKey,
-    splitDescription
+    gptRequest, readCachedUrls, writeCachedUrls, extractFirstNumber,
+    fetchGptImage, readByObjectKey,
+    extractSection,
+    extractSolutions,
+    extractQuestionSections,
 } from './fileUtils.js';
 
 import { scrapeProblem, scrapeSolutions } from './leetcodeScraper.js';
@@ -53,6 +54,11 @@ async function setup() {
     await mkdir(DEBUG_PATH, { recursive: true })
 }
 
+// TODO Testing:
+// 1. Test that images get scraped and are included in the flashcards
+// 2. Test the comments from different languages are removed but not from the language that is being processed
+// 3. Look through code again and see if anything else could be busted.
+
 async function main() {
     await setup()
 
@@ -76,11 +82,12 @@ async function main() {
 
     let count = 0
     for (const problemUrl of problemUrlsSlice) {
-        if (isProcessed(DATA_PATH, problemUrl)) continue // have to check again as urls might exist in other tags
+        if (isProcessed(`data`, problemUrl)) continue // have to check again as urls might exist in other tags
         if (count++ > 0) break // TODO REMOVE
         await processProblem(browser, problemUrl, LANGUAGE)
-        appendToProcessedUrls(DATA_PATH, problemUrl)
+        appendToProcessedUrls(`data`, problemUrl)
     }
+    browser.close()
 }
 
 function getCurrentIndex(problemUrls) {
@@ -106,20 +113,23 @@ async function generateFlashcard({ browser, problemUrl, language }) {
     const { title, descriptionSections } = await scrapeProblem(SCRAPED_PATH, browser, problemUrl)
     const solutions = await scrapeSolutions(SCRAPED_PATH, browser, language, `${problemUrl}/solutions/`)
 
-    const gptResponse = await promptGpt({ title, descriptionSections })
+    // TODO split prompts into parts, image description etc
+    const gptResponse = await promptGpt({ title, descriptionSections, solutions })
 
-    const imageDescription = extractSection(response, "Image Description", language)
+    const imageDescription = extractSection(gptResponse, "Image Description", language)
     const imageHtml = await getImageHtml(title, imageDescription, IMAGE_PATH)
     const youtubeUrls = await scrapeYoutubeVideoUrls(browser, SCRAPED_PATH, title, language)
 
-    const solutionUrls = extractSolutions(solutions)
+    const solutionUrls = extractSolutions(gptResponse, solutions)
+    const questionSections =  extractQuestionSections(gptResponse, language)
     const question = questionTemplate({
         title,
         problemUrl,
         youtubeUrls,
         solutionUrls,
         imageHtml,
-        descriptionSections
+        descriptionSections,
+        questionSections,
     })
 
     const answer = extractAnswer({
@@ -131,10 +141,12 @@ async function generateFlashcard({ browser, problemUrl, language }) {
     return { question, answer }
 }
 
-async function promptGpt({ title, descriptionSections }) {
-    const systemPrompt = readFileSync(`data/systemPrompt.txt`)
+async function promptGpt({ title, descriptionSections, solutions }) {
+    const systemPrompt = readFileSync(`data/systemPrompt.txt`, 'utf-8')
     const { statement, ioExamples } = descriptionSections
-    const userMessage = createUserMessage({ systemPrompt, statement, solutions, ioExamples })
+
+    // systemPrompt is used to calculate remaining characters
+    const userMessage = createUserMessage({ systemPrompt, statement, ioExamples, solutions })
     const gptResponse = await gptRequest({ title, systemPrompt, userMessage, dataPath: DATA_PATH })
     return gptResponse
 }

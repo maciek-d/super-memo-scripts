@@ -111,7 +111,7 @@ export async function scrapeProblem(scrapedPath, browser, problemUrl) {
 
     const descriptionSections = splitDescription(description)
     appendObjectToFile(problemUrl,
-        { title, ...descriptionSections, htmlDescription }, problemPath)
+        { title, descriptionSections, htmlDescription }, problemPath)
     return { title, descriptionSections }
 }
 

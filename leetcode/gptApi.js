@@ -17,13 +17,13 @@ export async function promptChatGpt(prompt, userMessage) {
     const messages = [
         systemMessage,
         { role: "user", content: userMessage },
-    ];
+    ]
 
     const completion = await openai.chat.completions.create({
         model: "gpt-4o",
         messages: messages,
-        max_tokens: 2048,
-    });
+        max_tokens: 2048, // Max response tokens
+    })
 
     return completion.choices[0].message.content;
 }
@@ -44,7 +44,8 @@ export function createUserMessage({systemPrompt, statement, solutions, ioExample
     // Calculate remaining characters
     const paritalPrompt = `${systemPrompt}\nProblem:\n\`\`\`\n${statement}\n\`\`\`\nSolutions:\n\`\`\`\n\`\`\`\nInput Output Examples:\n\`\`\`\n ${ioExamples}\n\`\`\``
     const tokenizer = new GPT3Tokenizer({ type: 'gpt3' });
-    const remaining = 4096 - tokenizer.encode(paritalPrompt).bpe.length;
+    const MAX_TOKENS_FOR_PROMPT =  8192 // 128000 is total max which includes response tokens (2048)
+    const remaining = MAX_TOKENS_FOR_PROMPT - tokenizer.encode(paritalPrompt).bpe.length;
 
     function getSolutionsLength(solutionsObj) {
         return Object.values(solutionsObj).reduce(
