@@ -6,7 +6,7 @@ import {
     readCurrentIndex, safeReadFile
 } from './fileUtils.js';
 
-import { scrapeProblem, scrapeProblemUrls, scrapeSolutions } from './leetcodeScraper.js';
+import { scrapeProblem, scrapeSolutions } from './leetcodeScraper.js';
 import { createUserMessage } from './gptApi.js';
 import { uploadImagesToS3 } from './s3Api.js';
 import { extractAnswer, questionTemplate, } from './prepareFlashcard.js';
@@ -14,7 +14,6 @@ import { updateSupermemoCard } from './supermemoApi.js';
 
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
-import { config } from 'dotenv';
 import { mkdir } from 'fs/promises';
 
 import StealthPlugin from 'puppeteer-extra-plugin-stealth'
@@ -22,8 +21,9 @@ import puppeteer from 'puppeteer-extra';
 // Add stealth plugin and use it
 puppeteer.use(StealthPlugin());
 
+import { config } from 'dotenv';
 const __dirname = dirname(fileURLToPath(import.meta.url))
-const envPath = join(__dirname, '.env')
+const envPath = join(__dirname, '../.env')
 config({ path: envPath })
 
 const TAG = process.argv.find(arg => arg.startsWith('--tag='))?.split('=')[1] || "array"
@@ -36,7 +36,7 @@ const LANGUAGE_OPTIONS = ["JavaScript", "C++", "Java", "Python3", "Python", "C",
 
 const DATA_ROOT = `./data/${LANGUAGE}`
 const DATA_PATH = `${DATA_ROOT}/${TAG}`
-const IMAGE_PATH = `data/ai-imgages`
+const IMAGE_PATH = `data/ai-images`
 const SUPERMEMO_PATH = `data/supermemo`
 const SCRAPED_PATH = `${DATA_PATH}/scraped`
 
@@ -47,6 +47,9 @@ async function setup() {
     await mkdir(IMAGE_PATH, { recursive: true })
     await mkdir(SUPERMEMO_PATH, { recursive: true })
     await mkdir(SCRAPED_PATH, { recursive: true })
+
+    const DEBUG_PATH = `data/puppeteer_debug`
+    await mkdir(DEBUG_PATH, { recursive: true })
 }
 
 async function main() {
@@ -55,13 +58,14 @@ async function main() {
     // const browser = await puppeteer.launch({ headless: "new" })
     const browser = await puppeteer.launch({ headless: false })
 
-    // TODO this might only read some of the urls either fetch all of them
-    // or allow to fetch a certain number at at time and save all of the new ones
     const { problemUrls, premiumProblemUrls } =
-        readCachedUrls(DATA_PATH) ?? await scrapeProblemUrls(browser, TAG)
-    writeCachedUrls(problemUrls, premiumProblemUrls, DATA_PATH)
+        readCachedUrls(`data`, TAG)
+    if (!problemUrls)
+        throw new Error("No urls file found. Function for fetching problem urls not yet implemented")
 
-    const currentProblemIndex = readCurrentIndex(DATA_PATH)
+    writeCachedUrls(problemUrls, premiumProblemUrls, `data`, TAG)
+
+    const currentProblemIndex = getCurrentIndex(problemUrls)
 
     const endOfBatchIndex = currentProblemIndex + BATCH_SIZE
     const lastProblemIndex = problemUrls.length - 1
@@ -69,13 +73,22 @@ async function main() {
         endOfBatchIndex : lastProblemIndex
     const problemUrlsSlice = problemUrls.slice(currentProblemIndex, lastBatchIndex)
 
-    console.log(problemUrls)
-
+    let count = 0
     for (const problemUrl of problemUrlsSlice) {
-        if (isProcessed(problemUrls)) continue
-        await processProblem(browser, problemUrl, LANGUAGE, courseId, targetParentNumber)
-        appendToProcessedUrls(problemUrls)
+        if (isProcessed(DATA_PATH, problemUrl)) continue // have to check again as urls might exist in other tags
+        if (count++ > 0) break // TODO REMOVE
+        await processProblem(browser, problemUrl, LANGUAGE)
+        appendToProcessedUrls(DATA_PATH, problemUrl)
     }
+}
+
+function getCurrentIndex(problemUrls) {
+    let count = 0
+    for (const problemUrl of problemUrls) {
+        if (!isProcessed(DATA_PATH, problemUrl)) break
+        count++
+    }
+    return count
 }
 
 // check if used and delete if not
@@ -83,29 +96,29 @@ async function main() {
 // TODO test with problem with images and solution with images
 
 async function processProblem(browser, problemUrl, language) {
-    const { title, statement, ioExamples } = await scrapeProblem(SCRAPED_PATH, browser, problemUrl)
+    const { title, statement, ioExamples, constraints } = await scrapeProblem(SCRAPED_PATH, browser, problemUrl)
     const solutions = await scrapeSolutions(SCRAPED_PATH, browser, language, `${problemUrl}/solutions/`)
-    const { youtubeUrl, youtubeUrlLang } = await scrapeYoutubeVideoUrls(SCRAPED_PATH, browser, title, language)
+    const { youtubeUrl, youtubeUrlLang } = await scrapeYoutubeVideoUrls(browser, SCRAPED_PATH, title, language)
 
     const { question, answer } = await generateFlashcard({
-        title, statement, solutions, ioExamples, youtubeUrl, youtubeUrlLang
+        title, problemUrl, statement, solutions, ioExamples, youtubeUrl, youtubeUrlLang, constraints
     })
 
-    await updateSupermemoCard(SUPERMEMO_PATH, question, answer, problemUrl)
+    await updateSupermemoCard(SUPERMEMO_PATH, question + "updated", answer, problemUrl)
 }
 
 async function generateFlashcard({
-    title, statement, solutions, ioExamples, youtubeUrl, youtubeUrlLang
+    title, problemUrl, statement, solutions, ioExamples, youtubeUrl, youtubeUrlLang, constraints
 }) {
+    const systemPrompt = safeReadFile(`data/systemPrompt.txt`)
 
-    const prompt = safeReadFile(`${DATA_ROOT}/promptTemplate.txt`)
-    const userMessage = createUserMessage({ prompt, statement, solutions, ioExamples })
-    const gptResponse = await gptPrompt(title, prompt, userMessage)
+    const userMessage = createUserMessage({ systemPrompt, statement, solutions, ioExamples })
+    const gptResponse = await gptPrompt({ title, systemPrompt, userMessage, dataPath: DATA_PATH })
 
-    return extractQA(gptResponse, solutions, ioExamples, youtubeUrl, youtubeUrlLang)
+    return extractQA({ title, problemUrl, gptResponse, solutions, ioExamples, youtubeUrl, youtubeUrlLang, constraints })
 }
 
-async function extractQA(gptResponse, solutions, ioExamples, youtubeUrl, youtubeUrlLang) {
+async function extractQA({ title, problemUrl, gptResponse, solutions, ioExamples, youtubeUrl, youtubeUrlLang, constraints }) {
 
     const language = LANGUAGE
     const {
@@ -134,7 +147,7 @@ async function extractQA(gptResponse, solutions, ioExamples, youtubeUrl, youtube
 }
 
 async function getImageHtml(title, imageDescription, imagePath) {
-    const imageName = `${extractFirstNumber(title)}.jpg`
+    const imageName = `${extractFirstNumber(title)}.png`
     const imageData = await fetchGptImage(imageDescription, `${imagePath}/${imageName}`)
 
     const { imageSrc, thumbSrc } = await uploadImagesToS3(imageData, imageName, `leetcode/ai-generated`)
@@ -145,7 +158,7 @@ async function getImageHtml(title, imageDescription, imagePath) {
     return imageHtml
 }
 
-async function scrapeYoutubeVideoUrl(queryString, browser) {
+async function scrapeYoutubeVideoUrl(browser, queryString) {
     const page = await browser.newPage();
     const searchUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(queryString)}&sp=EgIQAQ%253D%253D`;
 
@@ -170,14 +183,14 @@ async function scrapeYoutubeVideoUrl(queryString, browser) {
     }
 }
 
-async function scrapeYoutubeVideoUrls(scrapedPath, browser, title, language) {
+async function scrapeYoutubeVideoUrls(browser, scrapedPath, title, language) {
 
     const youtubeUrlsPath = `${scrapedPath}/youtubeUrls.js`
     const urls = readByObjectKey(youtubeUrlsPath, title)
     if (urls) return urls
 
-    const youtubeUrl = scrapeYoutubeVideoUrl(browser, title)
-    const youtubeUrlLang = scrapeYoutubeVideoUrl(browser, `${title} ${language}`)
+    const youtubeUrl = await scrapeYoutubeVideoUrl(browser, title)
+    const youtubeUrlLang = await scrapeYoutubeVideoUrl(browser, `${title} ${language}`)
 
     appendObjectToFile(title, { youtubeUrl, youtubeUrlLang }, youtubeUrlsPath)
     return { youtubeUrl, youtubeUrlLang }

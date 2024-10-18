@@ -4,20 +4,17 @@ import { appendObjectToFile, readByObjectKey } from "./fileUtils.js"
 
 export async function refreshToken(tokenPath, username, password) {
     tokenPath = `${tokenPath}/token.txt`
-    token = existsSync(tokenPath) ? readFileSync(tokenPath, 'utf8') : null
+    let token = existsSync(tokenPath) ? readFileSync(tokenPath, 'utf8') : null
     if (!token || isTokenExpired(token)) {
         token = await loginToSuperMemo(username, password)
         writeFileSync(tokenPath, token)
     }
 
     if (!token) {
-        return false
+        return null
     }
 
-    await browser.storage.sync.set({
-        "superMemoUserId": extractUserIdFromJwt(token)
-    });
-    return true
+    return token
 }
 
 function isTokenExpired(token) {
@@ -140,13 +137,14 @@ export async function updateSupermemoCard(supermemoPath, question, answer, probl
 
     const superMemoCredentials = {
         token,
-        userId: process.env.SM_USER_ID,
+        userId: extractUserIdFromJwt(token),
         courseId: process.env.LEETCODE_COURSE_ID,
         targetParentNumber: process.env.LEETCODE_TARGET_PARENT_NUMBER
     }
 
     const updateIdPath = `${supermemoPath}/update_ids.js`
     const pageNumber = readByObjectKey(updateIdPath, problemUrl)
+    console.log({ pageNumber })
     if (pageNumber) {
         await updateCard(superMemoCredentials, pageNumber, question, answer)
     } else {
@@ -154,3 +152,20 @@ export async function updateSupermemoCard(supermemoPath, question, answer, probl
         appendObjectToFile(problemUrl, newPageNumber, updateIdPath)
     }
 }
+
+function extractUserIdFromJwt(token) {
+    try {
+        // Split the JWT into its three parts and get the payload
+        const payloadBase64 = token.split('.')[1];
+
+        // Decode the Base64 string (replace padding if necessary)
+        const payloadBuffer = Buffer.from(payloadBase64, 'base64');
+        const payload = JSON.parse(payloadBuffer.toString('utf-8')); // Convert buffer to string and parse JSON
+
+        return payload.sub || null; // Return the user ID, or null if not present
+    } catch (error) {
+        console.error('Error extracting user ID from JWT:', error);
+        return null;
+    }
+}
+

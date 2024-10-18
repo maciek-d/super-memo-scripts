@@ -1,4 +1,4 @@
-import { appendObjectToFile } from './fileUtils.js'
+import { appendObjectToFile, readByObjectKey } from './fileUtils.js'
 
 const DEBUG_PATH = `data/puppeteer_debug`
 
@@ -30,6 +30,7 @@ async function clickUntilElementLoads(page, clickElement, xpathToWaitFor, timeou
     }
 }
 
+/** Deprecated **/
 export async function scrapeProblemUrls(browser, tag) {
     const url = `https://leetcode.com/tag/${tag}/`;
 
@@ -86,7 +87,13 @@ export async function scrapeProblem(scrapedPath, browser, problemUrl) {
     // Extract the part of the URL to match with the href attribute
     const urlPart = problemUrl.split('/problems/')[1].split('/')[0];
 
-    const { title, description, htmlDescription } = await page.evaluate((urlPart) => {
+    // Pass the function as a string and reconstruct it inside the browser
+    const getTextWithImageTagsStr = getTextWithImageTags.toString()
+
+    const { title, description, htmlDescription } = await page.evaluate((urlPart, getTextWithImageTagsStr) => {
+        // Convert the string back into a function
+        const getTextWithImageTags = new Function('return ' + getTextWithImageTagsStr)();
+
         // Find the <a> tag with the matching href for the title
         const titleElement = document.querySelector(`a[href="/problems/${urlPart}/"]`);
         const title = titleElement ? titleElement.innerText.trim() : '';
@@ -98,7 +105,7 @@ export async function scrapeProblem(scrapedPath, browser, problemUrl) {
         const htmlDescription = descriptionElement ? descriptionElement.innerHTML : ''
 
         return { title, description, htmlDescription };
-    }, urlPart);
+    }, urlPart, getTextWithImageTagsStr);
 
     await page.close();
     const { statement, ioExamples, constraints } = splitDescription(description)
@@ -119,21 +126,19 @@ function getTextWithImageTags(element) {
             if (node.nodeType === TEXT_NODE) {
                 return node.textContent.trim();
             }
-            if (
-                node.nodeType === ELEMENT_NODE &&
-                !["avatar", "badges", "static_assets"].some(val => node.src.includes(val))
-            ) {
-                if (node.tagName === 'IMG') {
+            if (node.nodeType === ELEMENT_NODE) {
+                // If it's an IMG tag, check src and unwanted categories
+                if (node.tagName === 'IMG' && node.src &&
+                    !["avatar", "badges", "static_assets"].some(val => node.src.includes(val))) {
                     return node.outerHTML;
                 }
-                // Recursively process child elements for nested tags
+                // For non-IMG elements or elements without src, recurse into child nodes
                 return getTextWithImageTags(node);
             }
             return ''; // Skip other node types
         })
         .join('');
 }
-
 
 function splitDescription(description) {
     const exampleIndex = description.indexOf('Example');
@@ -193,7 +198,7 @@ export async function scrapeSolutions(scrapedPath, browser, language, solutionsU
     }
 
     // select specific language only unless already selected
-    await selectLanguageSolutions(page)
+    await selectLanguageSolutions(page, language)
     await page.screenshot({ path: `${DEBUG_PATH}/select${language}.png` });
 
     // minimize tag select
@@ -371,5 +376,108 @@ async function switchToLangugageCodeBlocks(page, language) {
             console.error(`Error clicking on ${language}Option option:`, error);
         }
     }
+}
+
+async function waitForElementChange(page, selector, timeout = 10000) { // default timeout 10 seconds
+    return await page.evaluate((selector, timeout) => {
+        return Promise.race([
+            new Promise((resolve) => {
+                const targetNode = document.querySelector(selector)
+                if (!targetNode) {
+                    resolve(false)
+                    return
+                }
+
+                const observerOptions = {
+                    childList: true,
+                    subtree: true,
+                }
+
+                const observer = new MutationObserver((_, observer) => {
+                    resolve(true)
+                    observer.disconnect()
+                })
+
+                observer.observe(targetNode, observerOptions)
+            }),
+            new Promise((resolve) => {
+                setTimeout(() => resolve(false), timeout) // resolve as false after the timeout
+            })
+        ])
+    }, selector, timeout)
+}
+
+async function loadNextSolution(browser, block) {
+
+    const solutionLinkElement = await block.$('a[href*="/problems/"]')
+    if (!solutionLinkElement) return null
+    // Extract the href attribute from the solution link element
+    const solutionUrl = await solutionLinkElement.evaluate(el => el.getAttribute('href'))
+    // Ensure the URL is absolute (not just a path)
+    const baseUrl = 'https://leetcode.com'
+    const fullUrl = solutionUrl.startsWith('http') ? solutionUrl : baseUrl + solutionUrl
+
+    // Navigate to the solution URL in the new page
+    const solutionPage = await browser.newPage()
+    await solutionPage.setCacheEnabled(false)
+    await solutionPage.goto(fullUrl)
+
+    // Wait for the desired selector to load on the new page
+    await solutionPage.waitForSelector('div.break-words')
+    await solutionPage.waitForTimeout(4000)
+
+    return solutionPage
+}
+
+async function processCommentsAndSolution(page) {
+
+    page.on('console', msg => console.log(msg.text()));
+
+    await page.waitForSelector(
+        'div.relative.flex.w-full.flex-1.flex-col.overflow-y-auto > div.mx-auto.w-full'
+    );
+
+    try {
+        await page.waitForSelector('div.mt-2.flex > div.opacity-1', { timeout: 5000 });
+    } catch (e) {
+        return await page.evaluate(() => document.body.outerHTML)
+    }
+
+    const commentsAndSolutionHtml = await page.evaluate(async () => {
+
+        const solutionSelector =
+            'div.relative.flex.w-full.flex-1.flex-col.overflow-y-auto > div.mx-auto.w-full'
+
+        const solutionAndCommentsContainer = document.querySelector(solutionSelector);
+        if (!solutionAndCommentsContainer) {
+            console.log("Solution selector not found");
+            return "";
+        }
+
+        // Find and process each comment within the container
+        const comments = solutionAndCommentsContainer.querySelectorAll(
+            'div.mt-2.flex > div.opacity-1'
+        )
+
+        for (const commentBlock of comments) {
+            const codeBlocks = commentBlock.querySelectorAll('code.language');
+            let containsJavaScript = false;
+
+            codeBlocks.forEach(code => {
+                if (code.classList.contains('language-javascript')) {
+                    containsJavaScript = true;
+                }
+            });
+            // If the comment contains a code block that is not JavaScript, remove the entire comment block
+            if (codeBlocks.length > 0 && !containsJavaScript) {
+                commentBlock.remove();
+            }
+        }
+
+        // Return the HTML of the processed container
+        return solutionAndCommentsContainer.outerHTML
+    });
+
+    return commentsAndSolutionHtml
 }
 

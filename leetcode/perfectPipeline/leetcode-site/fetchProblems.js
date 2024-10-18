@@ -129,7 +129,7 @@ async function loadNextSolution(browser, block) {
     // Extract the href attribute from the solution link element
     const solutionUrl = await solutionLinkElement.evaluate(el => el.getAttribute('href'))
     // Ensure the URL is absolute (not just a path)
-    const baseUrl = 'https://leetcode.com' // Adjust this if needed
+    const baseUrl = 'https://leetcode.com'
     const fullUrl = solutionUrl.startsWith('http') ? solutionUrl : baseUrl + solutionUrl
 
     // Navigate to the solution URL in the new page

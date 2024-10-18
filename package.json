@@ -5,6 +5,7 @@
     "clipboardy": "^4.0.0",
     "dotenv": "^16.3.1",
     "electron": "^28.2.2",
+    "file-type": "^19.6.0",
     "form-data": "^4.0.0",
     "fs": "^0.0.1-security",
     "gpt3-tokenizer": "^1.1.5",

@@ -39,11 +39,10 @@ export async function createImage(prompt) {
     return response.data[0].url
 }
 
-export function createUserMessage({ prompt, statement, solutions, ioExamples }) {
-    const paritalPrompt = prompt
-        .replace(/(Problem:\n```)(.*?)(```)/s, `$1\n${statement}\n$3`)
-        .replace(/(Input Output Examples:\n```)(.*?)(```)/s, `$1\n${ioExamples}\n$3`)
+export function createUserMessage({systemPrompt, statement, solutions, ioExamples }) {
 
+    // Calculate remaining characters
+    const paritalPrompt = `${systemPrompt}\nProblem:\n\`\`\`\n${statement}\n\`\`\`\nSolutions:\n\`\`\`\n\`\`\`\nInput Output Examples:\n\`\`\`\n ${ioExamples}\n\`\`\``
     const tokenizer = new GPT3Tokenizer({ type: 'gpt3' });
     const remaining = 4096 - tokenizer.encode(paritalPrompt).bpe.length;
 
@@ -102,7 +101,7 @@ ${ioExamples}
 export async function uploadImage(path, title, imageDescription) {
     const imageName = extractFirstNumber(title)
 
-    const imagePath = join(path, `${imageName}.jpg`);
+    const imagePath = join(path, `${imageName}.png`);
     const imageExists = existsSync(imagePath)
     let image = imageExists ? readImage(imagePath) : null
 

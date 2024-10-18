@@ -1,9 +1,9 @@
 import { existsSync, readFileSync, writeFileSync } from "fs"
 import { createImage, promptChatGpt } from "./gptApi.js"
 
-export function readCachedUrls(dataPath) {
-    const problemUrlCachePath = `${dataPath}/cache/problemUrl.js`
-    const premiumProblemUrlCachePath = `${dataPath}/cache/premiumProblemUrl.js`
+export function readCachedUrls(dataPath, tag) {
+    const problemUrlCachePath = `${dataPath}/problemUrls/${tag}.js`
+    const premiumProblemUrlCachePath = `${dataPath}/premiumProblemUrls/${tag}.js`
 
     const problemUrls = existsSync(problemUrlCachePath) ?
         JSON.parse(safeReadFile(problemUrlCachePath)) : null
@@ -17,9 +17,9 @@ export function readCachedUrls(dataPath) {
     return null
 }
 
-export function writeCachedUrls(problemUrls, premiumProblemUrls, dataPath) {
-    const problemUrlCachePath = `${dataPath}/cache/problemUrl.js`
-    const premiumProblemUrlCachePath = `${dataPath}/cache/premiumProblemUrl.js`
+export function writeCachedUrls(problemUrls, premiumProblemUrls, dataPath, tag) {
+    const problemUrlCachePath = `${dataPath}/problemUrls/${tag}.js`
+    const premiumProblemUrlCachePath = `${dataPath}/premiumProblemUrls/${tag}.js`
 
     writeFileSync(problemUrlCachePath, JSON.stringify(problemUrls));
     writeFileSync(premiumProblemUrlCachePath, JSON.stringify(premiumProblemUrls));
@@ -47,7 +47,7 @@ export function readCurrentIndex(dataPath) {
 }
 
 export function readByObjectKey(path, key) {
-        return JSON.parse(safeReadFile(path))?.[key]
+    return JSON.parse(safeReadFile(path))?.[key]
 }
 
 export function appendObjectToFile(key, object, path) {
@@ -59,18 +59,17 @@ export function appendObjectToFile(key, object, path) {
 }
 
 export async function gptPrompt({
-    title, prompt, userMessage,
+    title, systemPrompt, userMessage, dataPath
 }) {
-    const response = readByObjectKey(`${DATA_PATH}/gptResponses.js`, title) ??
-        await promptChatGpt(prompt, userMessage)
+    const response = readByObjectKey(`${dataPath}/gptResponses.js`, title) ??
+        await promptChatGpt(systemPrompt, userMessage)
 
-    appendObjectToFile(title, response, `${DATA_PATH}/gptResponses.js`)
-
+    appendObjectToFile(title, response, `${dataPath}/gptResponses.js`)
     return response
 }
 
 export function extractDataFromGptResponse(response, solutions, language) {
-    const imageDescription = extractSection(response, "Image Description")
+    const imageDescription = extractSection(response, "Image Description", language)
     const [gptSolutionIndex, gptSolutionIndex2] = extractProblemIndex(response)
     const keys = Object.keys(solutions);
     const solutionsUrl1 = solutions[keys[gptSolutionIndex]];
@@ -103,7 +102,6 @@ export function extractDataFromGptResponse(response, solutions, language) {
 
     return {
         imageDescription, solutionsUrl1, solutionsUrl2,
-        solutionImages, solutionImages2,
         summary, description, bestIoExample,
         algorithm, datastructure, code, code2, steps, steps2,
         solution, solution2, complexity
@@ -151,7 +149,7 @@ export const extractFirstNumber = (str) => {
 
 export async function fetchGptImage(imageDescription, filePath) {
     const imageExists = existsSync(filePath)
-    let image = imageExists ? readImage(imagePath) : null
+    let image = imageExists ? readImage(filePath) : null
 
     if (!imageExists) {
         const url = await createImage(imageDescription)
@@ -163,8 +161,16 @@ export async function fetchGptImage(imageDescription, filePath) {
 }
 
 function readImage(imagePath) {
-    const data = safeReadFile(imagePath);
-    return Buffer.from(data);
+    let imageData = null
+    try {
+        imageData = readFileSync(imagePath)
+    } catch (e) {
+        if (e.code === 'ENOENT') { // File not found
+            return null
+        }
+        throw e
+    }
+    return Buffer.from(imageData);
 }
 
 function stripCodeBlocks(text, language) {
