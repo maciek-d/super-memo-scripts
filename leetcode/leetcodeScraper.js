@@ -86,6 +86,8 @@ export async function scrapeProblem(scrapedPath, browser, problemUrl) {
 
     // Extract the part of the URL to match with the href attribute
     const urlPart = problemUrl.split('/problems/')[1].split('/')[0];
+    await page.waitForSelector(`a[href="/problems/${urlPart}/"]`, { timeout: 5000 })
+
 
     // Pass the function as a string and reconstruct it inside the browser
     const getTextWithImageTagsStr = getTextWithImageTags.toString()
@@ -96,7 +98,7 @@ export async function scrapeProblem(scrapedPath, browser, problemUrl) {
 
         // Find the <a> tag with the matching href for the title
         const titleElement = document.querySelector(`a[href="/problems/${urlPart}/"]`);
-        const title = titleElement ? titleElement.innerText.trim() : '';
+        const title = titleElement ? titleElement.textContent.trim() : null;
 
         // Find the description
         const descriptionElement = document.querySelector('div[data-track-load="description_content"]');
@@ -107,11 +109,16 @@ export async function scrapeProblem(scrapedPath, browser, problemUrl) {
         return { title, description, htmlDescription };
     }, urlPart, getTextWithImageTagsStr);
 
+    if (!title) {
+        throw new Exception(`Title not found for ${problemUrl}`)
+    }
+    const problemDifficulty = await scrapeDifficulty(page)
+    const acceptanceRate  = await scrapeAcceptanceRate(page)
     await page.close();
 
     const descriptionSections = splitDescription(description)
     appendObjectToFile(problemUrl,
-        { title, descriptionSections, htmlDescription }, problemPath)
+        { title, descriptionSections, htmlDescription, problemDifficulty, acceptanceRate }, problemPath)
     return { title, descriptionSections }
 }
 
@@ -453,5 +460,36 @@ async function processCommentsAndSolution(page, language) {
     }, language);
 
     return commentsAndSolutionHtml
+}
+
+export async function scrapeDifficulty(page) {
+    // Wait for the element to appear to ensure it's loaded
+    await page.waitForSelector('div[class*="text-difficulty-"]')
+
+    // Select and extract the text content from the matched element
+    return await page.$eval(
+        'div[class*="text-difficulty-"]',
+        el => el.textContent.trim()
+    )
+}
+
+export async function scrapeAcceptanceRate(page) {
+    try {
+        await page.waitForSelector('div.flex.flex-wrap.items-center', { timeout: 10000 })
+    } catch (e) {
+        await page.waitForTimeout(4000)
+        await page.waitForSelector('div.flex.flex-wrap.items-center', { timeout: 10000 })
+    }
+
+    const acceptanceRate = await page.evaluate(() => {
+        const generalContainer = document.querySelector('div.flex.flex-wrap.items-center')
+        const rateDivs = Array.from(generalContainer.children)
+        const acceptanceRateDiv = rateDivs.find(div => div.textContent.includes('Acceptance Rate'))
+        const rateSpan = acceptanceRateDiv.querySelector('span')
+
+        return rateSpan.textContent.trim().replace('%', '')
+    })
+
+    return acceptanceRate
 }
 

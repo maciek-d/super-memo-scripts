@@ -112,7 +112,6 @@ async function processProblem({
     youtubeUrlJs,
     browser,
 }) {
-    console.log(title)
     const { solutions, solutionsUrls } = readSolutions(title) ??
         await fetchSolutions(browser, solutionsUrl)
     addObjectToFile(title, { solutions, solutionsUrls }, './data/solutions.js')

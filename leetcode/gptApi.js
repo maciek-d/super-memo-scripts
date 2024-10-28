@@ -1,3 +1,4 @@
+import axios from 'axios';
 import { writeFile } from 'fs/promises';
 import gptPkg from 'gpt3-tokenizer';
 const GPT3Tokenizer = gptPkg.default
@@ -39,12 +40,12 @@ export async function createImage(prompt) {
     return response.data[0].url
 }
 
-export function createUserMessage({systemPrompt, statement, solutions, ioExamples }) {
+export function createUserAnswerMessage({ systemPrompt, solutions, problemDifficulty }) {
 
     // Calculate remaining characters
-    const paritalPrompt = `${systemPrompt}\nProblem:\n\`\`\`\n${statement}\n\`\`\`\nSolutions:\n\`\`\`\n\`\`\`\nInput Output Examples:\n\`\`\`\n ${ioExamples}\n\`\`\``
+    const paritalPrompt = `${systemPrompt}Solutions:\n\`\`\`\n\`\`\``
     const tokenizer = new GPT3Tokenizer({ type: 'gpt3' });
-    const MAX_TOKENS_FOR_PROMPT =  8192 // 128000 is total max which includes response tokens (2048)
+    const MAX_TOKENS_FOR_PROMPT = 5000 // 128000 is total max which includes response tokens (2048)
     const remaining = MAX_TOKENS_FOR_PROMPT - tokenizer.encode(paritalPrompt).bpe.length;
 
     function getSolutionsLength(solutionsObj) {
@@ -85,35 +86,25 @@ export function createUserMessage({systemPrompt, statement, solutions, ioExample
         .join('\n');
 
     // Replace the placeholder text between the backticks for the Solutions section
-    return `Problem:
-\`\`\`
-${statement}
-\`\`\`
-Solutions:
-\`\`\`
-${formattedSolutions}
-\`\`\`
-Input Output Examples:
-\`\`\`
-${ioExamples}
-\`\`\``
+    return `Solutions:\n\`\`\`\n${formattedSolutions}\n\`\`\``
 }
 
-export async function uploadImage(path, title, imageDescription) {
-    const imageName = extractFirstNumber(title)
-
-    const imagePath = join(path, `${imageName}.png`);
-    const imageExists = existsSync(imagePath)
-    let image = imageExists ? readImage(imagePath) : null
-
-    if (!imageExists) {
-        const url = await createImage(imageDescription)
-        image = await downloadImage(url)
-
-        await writeFile(imagePath, image)
-    }
-
-    // uploadImage to s3
-    return imageName
+export function createUserQuestionMessage({ statement, ioExamples }) {
+    return `Problem:\n\`\`\`\n${statement}\n\`\`\`\nInput\nOutput\nExamples:\n\`\`\`\n${ioExamples}\n\`\`\``
 }
 
+function trimAfterFirstComment(text) {
+    const pattern = /Comments \(\d+\)\s*.*?(?=\d+\s*(Show \d+ Replies|Reply|$))/s;
+    const match = pattern.exec(text);
+    return match ? text.slice(0, match.index + match[0].length) : text;
+}
+
+export async function downloadImage(url) {
+    const response = await axios({
+        url,
+        method: 'GET',
+        responseType: 'arraybuffer',
+    });
+
+    return Buffer.from(response.data, 'binary');
+}

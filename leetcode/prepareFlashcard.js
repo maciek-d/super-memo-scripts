@@ -6,26 +6,28 @@ export function extractAnswer({
     language
 }) {
     const { solutionsUrl1, solutionsUrl2 } = solutionUrls
-    const {
-        algorithm, datastructure, code, code2, steps, steps2,
-        solution, solution2, complexity
-    } = extractAnswerSections(gptResponse, language)
-    // Extract sections from response
-    const DAS = algorithm + " - " + datastructure
+    const sections = extractAnswerSections(gptResponse, language)
 
     // Format the answer string
     const answer =
-        `<b><a href="${solutionsUrl1}">${DAS}</a></b>
-<div class="text-container"><br/>${solution}<br/><br/></div>
-<div>${code}</div>
-<div>${steps}</div>
+        `<b><a href="${solutionsUrl1}">${sections.trick}</a></b>
+<div class="text-container"><br/>${sections.solution}<br/><br/></div>
+<div>${sections.code}</div>
+<div>${sections.steps}</div>
 <div class="text-container">
-    <div>${code2}</div>
-    <div>${steps2}</div>
+    <div>${sections.code2}</div>
+    <div>${sections.steps2}</div>
     <a href="${solutionsUrl2}"><div>[1]</div></a>
-    <div>${solution2}</div>
+    <div>${sections.solution2}</div>
 </div>
-<div class="text-container"><br/>${complexity}</div>`;
+<div><br/>${sections.DAS}<br/><br/></div>
+<div class="text-container"><br/>${sections.complexity}</div>
+<div>pitfalls</div>
+<div class="text-container"><br/>${sections.pitfalls}<br/><br/></div>
+<div>edge cases</div>
+<div class="text-container"><br/>${sections.edgeCases}<br/><br/></div>
+<div>intuition</div>
+<div class="text-container"><br/>${sections.intuition}<br/><br/></div>`
 
     return answer;
 }

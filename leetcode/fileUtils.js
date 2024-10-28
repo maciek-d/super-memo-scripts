@@ -1,5 +1,5 @@
 import { existsSync, readFileSync, writeFileSync } from "fs"
-import { createImage, promptChatGpt } from "./gptApi.js"
+import { createImage, downloadImage, promptChatGpt } from "./gptApi.js"
 
 export function readCachedUrls(dataPath, tag) {
     const problemUrlCachePath = `${dataPath}/problemUrls/${tag}.js`
@@ -26,18 +26,16 @@ export function writeCachedUrls(problemUrls, premiumProblemUrls, dataPath, tag) 
 }
 
 export function isProcessed(dataPath, url) {
-    const processedUrlsPath = `${dataPath}/processedUrls.js`
-    const processedUrlsArray = existsSync(processedUrlsPath) ?
-        JSON.parse(safeReadFile(processedUrlsPath)) : null
+    const processedUrlsArray = existsSync(dataPath) ?
+        JSON.parse(safeReadFile(dataPath)) : null
     return (new Set(processedUrlsArray ?? [])).has(url)
 }
 
 export function appendToProcessedUrls(dataPath, newUrl) {
-    const processedUrlsPath = `${dataPath}/processedUrls.js`
-    const processedUrlsArray = existsSync(processedUrlsPath) ?
-        JSON.parse(safeReadFile(processedUrlsPath)) : null
+    const processedUrlsArray = existsSync(dataPath) ?
+        JSON.parse(safeReadFile(dataPath)) : null
     const newProcessedUrlsArray = Array.from((new Set(processedUrlsArray)).add(newUrl))
-    writeFileSync(processedUrlsPath, JSON.stringify(newProcessedUrlsArray));
+    writeFileSync(dataPath, JSON.stringify(newProcessedUrlsArray));
 }
 
 export function readByObjectKey(path, key) {
@@ -55,8 +53,10 @@ export function appendObjectToFile(key, object, path) {
 export async function gptRequest({
     title, systemPrompt, userMessage, dataPath
 }) {
-    const response = readByObjectKey(`${dataPath}/gptResponses.js`, title) ??
-        await promptChatGpt(systemPrompt, userMessage)
+    const responseFromFile = readByObjectKey(`${dataPath}`, title)
+    if (responseFromFile) console.log({ responseFromFile: responseFromFile?.slice(0, 200) })
+    const response = responseFromFile ??
+        (await promptChatGpt(systemPrompt, userMessage))
 
     appendObjectToFile(title, response, `${dataPath}/gptResponses.js`)
     return response
@@ -64,9 +64,9 @@ export async function gptRequest({
 
 export function extractSolutions(response, solutions) {
     const [gptSolutionIndex, gptSolutionIndex2] = extractProblemIndex(response)
-    const keys = Object.keys(solutions);
-    const solutionsUrl1 = solutions[keys[gptSolutionIndex]];
-    const solutionsUrl2 = solutions[keys[gptSolutionIndex2]];
+    const keys = Object.keys(solutions)
+    const solutionsUrl1 = keys[gptSolutionIndex]
+    const solutionsUrl2 = keys[gptSolutionIndex2]
 
     if (!solutionsUrl1 || !solutionsUrl2) {
         throw new Error(
@@ -97,20 +97,26 @@ export function extractAnswerSections(response, language) {
         .replaceAll("&gt;", "＞")
         .replace(/<(?!img|\/img)/gi, '＜')
 
-
     const algorithm = extractSection(response, "Problem Algorithm", language)
     const datastructure = extractSection(response, "Problem Datastructure", language)
-    const code = extractSection(response, "Primary Solution Code", language);
-    const code2 = extractSection(response, "Secondary Solution Code", language);
-    const steps = extractSection(response, "Enumerated Steps 1", language);
-    const steps2 = extractSection(response, "Enumerated Steps 2", language);
-    const solution = extractSection(response, "Solution 1", language);
-    const solution2 = extractSection(response, "Solution 2", language);
-    const complexity = extractSection(response, "Time Complexity", language);
+    const code = extractSection(response, "Primary Solution Code", language)
+    const code2 = extractSection(response, "Secondary Solution Code", language)
+    const steps = extractSection(response, "Enumerated Steps 1", language)
+    const steps2 = extractSection(response, "Enumerated Steps 2", language)
+    const solution = extractSection(response, "Solution 1", language)
+    const solution2 = extractSection(response, "Solution 2", language)
+    const complexity = extractSection(response, "Time Complexity", language)
+
+    const trick = extractSection(response, "Solution Trick", language)
+    const pitfalls = extractSection(response, "Common Mistakes", language)
+    const edgeCases = extractSection(response, "Edge Cases", language)
+    const intuition = extractSection(response, "Key Intuition", language)
+    const DAS = algorithm + " - " + datastructure
 
     return {
-        algorithm, datastructure, code, code2, steps, steps2,
-        solution, solution2, complexity
+        DAS, code, code2, steps, steps2,
+        solution, solution2, complexity,
+        trick, pitfalls, edgeCases, intuition
     }
 }
 
@@ -122,11 +128,11 @@ function extractProblemIndex(response) {
     const asteriskRegex = new RegExp(`\\*\\*${sectionTitle}\\*\\*.*?\\[\\s*([\\d,\\s]+)\\s*\\]`, 'i');
 
     const noCodeBlocks = response
-        .replace(/```javascript\n([\s\S]*?)\n\s*```/g, (_match, p1) => {
+        .replace(/```javascript\n([\s\S] *?) \n\s * ```/g, (_match, p1) => {
             return p1
-        }).replace(/```json\n([\s\S]*?)\n\s*```/g, (_match, p1) => {
+        }).replace(/```json\n([\s\S] *?) \n\s * ```/g, (_match, p1) => {
             return p1
-        }).replace(/```\s*([\s\S]*?)\s*```/g, (_match, p1) => {
+        }).replace(/```\s * ([\s\S] *?) \s * ```/g, (_match, p1) => {
             return p1
         })
 
@@ -145,6 +151,7 @@ function extractProblemIndex(response) {
         return indices;
     }
 
+    objLog({ cleanedResponse })
     throw new Error(`Failed match index regex ${hashRegex} and ${asteriskRegex}`)
 }
 
@@ -157,12 +164,16 @@ export async function fetchGptImage(imageDescription, filePath) {
     const imageExists = existsSync(filePath)
     let image = imageExists ? readImage(filePath) : null
 
+
     if (!imageExists) {
         const url = await createImage(imageDescription)
         image = await downloadImage(url)
 
-        writeFileSync(imagePath, image)
+        writeFileSync(filePath, image)
+    } else {
+        console.log(`Reading image from ${filePath}`)
     }
+
     return image
 }
 
@@ -232,9 +243,12 @@ export function extractSection(text, sectionTitle, language) {
     if (section.length === 0) {
         throw new Error(`couldnt find blocks for section ${sectionTitle}`)
     }
-    return stripCodeBlocks(section.join('\n').trim(), language)
+
+    const formattedSection = stripCodeBlocks(section.join('\n').trim(), language)
         .replaceAll("\n", "<br/>")
         .replace(/\*\*(.*?)\*\*/g, '<b>$1</b>')
+    if (!formattedSection) throw new Error(`Section ${sectionTitle} empty or missing`)
+    return formattedSection
 }
 
 export function safeReadFile(path) {
@@ -271,4 +285,8 @@ export function splitDescription(description) {
         ioExamples,
         constraints
     };
+}
+
+export function objLog(obj) {
+    console.log(JSON.stringify(obj))
 }

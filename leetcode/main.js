@@ -5,10 +5,14 @@ import {
     extractSection,
     extractSolutions,
     extractQuestionSections,
+    objLog,
+    safeReadFile,
 } from './fileUtils.js';
 
-import { scrapeProblem, scrapeSolutions } from './leetcodeScraper.js';
-import { createUserMessage } from './gptApi.js';
+import { readFileSync, writeFileSync } from "fs"
+
+import { scrapeAcceptanceRate, scrapeDifficulty, scrapeProblem, scrapeSolutions } from './leetcodeScraper.js';
+import { createUserAnswerMessage, createUserQuestionMessage } from './gptApi.js';
 import { uploadImagesToS3 } from './s3Api.js';
 import { extractAnswer, questionTemplate, } from './prepareFlashcard.js';
 import { updateSupermemoCard } from './supermemoApi.js';
@@ -23,12 +27,11 @@ import puppeteer from 'puppeteer-extra';
 puppeteer.use(StealthPlugin());
 
 import { config } from 'dotenv';
-import { readFileSync } from 'fs';
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const envPath = join(__dirname, '../.env')
 config({ path: envPath })
 
-const TAG = process.argv.find(arg => arg.startsWith('--tag='))?.split('=')[1] || "array"
+const TAG = process.argv.find(arg => arg.startsWith('--tag='))?.split('=')[1] || "neetcode150"
 const LANGUAGE = process.argv.find(arg => arg.startsWith('--lang='))?.split('=')[1] || "Python"
 const BATCH_SIZE = process.argv.find(arg => arg.startsWith('--batch='))?.split('=')[1] || 20
 
@@ -42,28 +45,22 @@ const IMAGE_PATH = `data/ai-images`
 const SUPERMEMO_PATH = `data/supermemo`
 const SCRAPED_PATH = `${DATA_PATH}/scraped`
 
-async function setup() {
-    if (!LANGUAGE_OPTIONS.includes(LANGUAGE)) throw new Error(`${LANGUAGE} not found in ${LANGUAGE_OPTIONS}`)
-    await mkdir(DATA_ROOT, { recursive: true })
-    await mkdir(DATA_PATH, { recursive: true })
-    await mkdir(IMAGE_PATH, { recursive: true })
-    await mkdir(SUPERMEMO_PATH, { recursive: true })
-    await mkdir(SCRAPED_PATH, { recursive: true })
-
-    const DEBUG_PATH = `data/puppeteer_debug`
-    await mkdir(DEBUG_PATH, { recursive: true })
-}
+const PROCESSED_PATH = 'data/processedUrls.js'
 
 // TODO Testing:
-// 1. Test that images get scraped and are included in the flashcards
+// Important before you run. Split into two prompts for question and answer
+// Move unused sections and add them into hard questions only ... Figure out how to determine if question is hard
+// 1. Test that
+// how about in solutions ?? include in solutions
 // 2. Test the comments from different languages are removed but not from the language that is being processed
 // 3. Look through code again and see if anything else could be busted.
 
 async function main() {
-    await setup()
+    if (!LANGUAGE_OPTIONS.includes(LANGUAGE)) throw new Error(`${LANGUAGE} not found in ${LANGUAGE_OPTIONS}`)
+    await setupDirs()
+    const browser = await puppeteer.launch({ headless: "new" })
 
-    // const browser = await puppeteer.launch({ headless: "new" })
-    const browser = await puppeteer.launch({ headless: false })
+    // const browser = await puppeteer.launch({ headless: false })
 
     const { problemUrls, premiumProblemUrls } =
         readCachedUrls(`data`, TAG)
@@ -75,53 +72,50 @@ async function main() {
     const currentProblemIndex = getCurrentIndex(problemUrls)
 
     const endOfBatchIndex = currentProblemIndex + BATCH_SIZE
-    const lastProblemIndex = problemUrls.length - 1
-    const lastBatchIndex = endOfBatchIndex < lastProblemIndex ?
-        endOfBatchIndex : lastProblemIndex
+    const arrayLength = problemUrls.length
+    // const lastBatchIndex = endOfBatchIndex < arrayLength ?
+    //     endOfBatchIndex : arrayLength
+    const lastBatchIndex = 40
     const problemUrlsSlice = problemUrls.slice(currentProblemIndex, lastBatchIndex)
+    objLog({ currentProblemIndex, lastBatchIndex })
 
-    let count = 0
     for (const problemUrl of problemUrlsSlice) {
-        if (isProcessed(`data`, problemUrl)) continue // have to check again as urls might exist in other tags
-        if (count++ > 0) break // TODO REMOVE
-        await processProblem(browser, problemUrl, LANGUAGE)
-        appendToProcessedUrls(`data`, problemUrl)
+        if (isProcessed(PROCESSED_PATH, problemUrl)) continue // Necessary: dup urls might exist in other tags
+
+        const { question, answer } =
+            await generateFlashcard({ browser, problemUrl, LANGUAGE })
+        await updateSupermemoCard(SUPERMEMO_PATH, question, answer, problemUrl)
+
+        appendToProcessedUrls(PROCESSED_PATH, problemUrl)
+        // Temporary solution to stop pages from buildig up
+        const pages = await browser.pages()
+        for (const page of pages) {
+            await page.close()
+        }
     }
     browser.close()
-}
 
-function getCurrentIndex(problemUrls) {
-    let count = 0
-    for (const problemUrl of problemUrls) {
-        if (!isProcessed(DATA_PATH, problemUrl)) break
-        count++
-    }
-    return count
 }
 
 // check if used and delete if not
 // fetchProblems.js
 // TODO test with problem with images and solution with images
 
-async function processProblem(browser, problemUrl, language) {
-    const { question, answer } =
-        await generateFlashcard({ browser, problemUrl, language })
-    await updateSupermemoCard(SUPERMEMO_PATH, question + "updated", answer, problemUrl)
-}
-
 async function generateFlashcard({ browser, problemUrl, language }) {
-    const { title, descriptionSections } = await scrapeProblem(SCRAPED_PATH, browser, problemUrl)
+    const { title, descriptionSections, problemDifficulty } = await scrapeProblem(SCRAPED_PATH, browser, problemUrl)
+    objLog({ title })
+
     const solutions = await scrapeSolutions(SCRAPED_PATH, browser, language, `${problemUrl}/solutions/`)
 
-    // TODO split prompts into parts, image description etc
-    const gptResponse = await promptGpt({ title, descriptionSections, solutions })
+    const questionResponse = await questionPrompt({ title, descriptionSections })
+    const answerResponse = await answerPrompt({ problemDifficulty, solutions, language })
 
-    const imageDescription = extractSection(gptResponse, "Image Description", language)
+    const imageDescription = extractSection(questionResponse, "Image Description", language)
     const imageHtml = await getImageHtml(title, imageDescription, IMAGE_PATH)
     const youtubeUrls = await scrapeYoutubeVideoUrls(browser, SCRAPED_PATH, title, language)
 
-    const solutionUrls = extractSolutions(gptResponse, solutions)
-    const questionSections =  extractQuestionSections(gptResponse, language)
+    const solutionUrls = extractSolutions(answerResponse, solutions)
+    const questionSections = extractQuestionSections(questionResponse, language)
     const question = questionTemplate({
         title,
         problemUrl,
@@ -134,29 +128,49 @@ async function generateFlashcard({ browser, problemUrl, language }) {
 
     const answer = extractAnswer({
         solutionUrls,
-        gptResponse,
+        gptResponse: answerResponse,
         language
     })
 
     return { question, answer }
 }
 
-async function promptGpt({ title, descriptionSections, solutions }) {
-    const systemPrompt = readFileSync(`data/systemPrompt.txt`, 'utf-8')
+async function questionPrompt({ title, descriptionSections }) {
     const { statement, ioExamples } = descriptionSections
 
+    const systemPrompt = readFileSync(`data/questionPrompt.txt`, 'utf-8')
+    const questionMessage = createUserQuestionMessage({ statement, ioExamples })
+    const questionResponse = await gptRequest({ title, systemPrompt, questionMessage, dataPath: `${DATA_PATH}/gptQuestionResponses.js` })
+
+    return questionResponse
+}
+
+async function answerPrompt({ title, problemDifficulty, solutions, language }) {
+    const prompt = readFileSync(`data/answerPrompt.txt`, 'utf-8') + `\nIMPORTANT SELECT only solutions USING ${language}`
+    const hardAnswerPrompt = readFileSync(`data/hardAnswerPrompt.txt`, 'utf-8')
     // systemPrompt is used to calculate remaining characters
-    const userMessage = createUserMessage({ systemPrompt, statement, ioExamples, solutions })
-    const gptResponse = await gptRequest({ title, systemPrompt, userMessage, dataPath: DATA_PATH })
-    return gptResponse
+    const isHard = problemDifficulty == "Hard"
+    const systemPrompt = isHard ? prompt + hardAnswerPrompt : prompt
+
+    const answerMessage = createUserAnswerMessage({ systemPrompt, solutions })
+    const answerResponse = await gptRequest({ title, systemPrompt: prompt, answerMessage, dataPath: `${DATA_PATH}/gptAnswerResponses.js` })
+    return answerResponse
 }
 
 async function getImageHtml(title, imageDescription, imagePath) {
     const imageName = `${extractFirstNumber(title)}.png`
+
+    if (!imageDescription) throw new Error(`Missing image description ${imageDescription}`)
+
     const imageData = await fetchGptImage(imageDescription, `${imagePath}/${imageName}`)
 
     const { imageSrc, thumbSrc } = await uploadImagesToS3(imageData, imageName, `leetcode/ai-generated`)
 
+    if (!imageSrc || !thumbSrc) {
+        throw new Error(`Failed to uploadImagesToS3 ${JSON.stringify
+            ({ imageName, imageData: imageData.subarray(0, 20) }, null, 2)}`
+        )
+    }
     const imageHtml = `<div><a href="${imageSrc}" target="_blank">
         <img src="${thumbSrc}" style="resize-img" /></a></div>`
 
@@ -197,6 +211,12 @@ async function scrapeYoutubeVideoUrls(browser, scrapedPath, title, language) {
     const youtubeUrl = await scrapeYoutubeVideoUrl(browser, title)
     const youtubeUrlLang = await scrapeYoutubeVideoUrl(browser, `${title} ${language}`)
 
+    if (!youtubeUrl || !youtubeUrlLang) {
+        throw new Error(
+            `Failed to scrapeYoutubeVideoUrl ${JSON.stringify
+                ({ youtubeUrl, youtubeUrlLang }, null, 2)}`
+        )
+    }
     appendObjectToFile(title, { youtubeUrl, youtubeUrlLang }, youtubeUrlsPath)
     return { youtubeUrl, youtubeUrlLang }
 }
@@ -204,4 +224,24 @@ async function scrapeYoutubeVideoUrls(browser, scrapedPath, title, language) {
 main().then(() => {
     console.log("done");
 })
+
+async function setupDirs() {
+    await mkdir(DATA_ROOT, { recursive: true })
+    await mkdir(DATA_PATH, { recursive: true })
+    await mkdir(IMAGE_PATH, { recursive: true })
+    await mkdir(SUPERMEMO_PATH, { recursive: true })
+    await mkdir(SCRAPED_PATH, { recursive: true })
+
+    const DEBUG_PATH = `data/puppeteer_debug`
+    await mkdir(DEBUG_PATH, { recursive: true })
+}
+
+function getCurrentIndex(problemUrls) {
+    let count = 0
+    for (const problemUrl of problemUrls) {
+        if (!isProcessed(`data`, problemUrl)) break
+        count++
+    }
+    return count
+}
 
