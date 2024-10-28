@@ -45,7 +45,7 @@ const IMAGE_PATH = `data/ai-images`
 const SUPERMEMO_PATH = `data/supermemo`
 const SCRAPED_PATH = `${DATA_PATH}/scraped`
 
-const PROCESSED_PATH = 'data/processedUrls.js'
+const PROCESSED_PATH = 'data/processedNeetcode150.js'
 
 // TODO Testing:
 // Important before you run. Split into two prompts for question and answer
@@ -208,7 +208,8 @@ async function scrapeYoutubeVideoUrls(browser, scrapedPath, title, language) {
     const urls = readByObjectKey(youtubeUrlsPath, title)
     if (urls) return urls
 
-    const youtubeUrl = await scrapeYoutubeVideoUrl(browser, title)
+    // TODO remove neetcode
+    const youtubeUrl = await scrapeYoutubeVideoUrl(browser, `${title} neetcode`)
     const youtubeUrlLang = await scrapeYoutubeVideoUrl(browser, `${title} ${language}`)
 
     if (!youtubeUrl || !youtubeUrlLang) {
