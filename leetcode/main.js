@@ -6,12 +6,11 @@ import {
     extractSolutions,
     extractQuestionSections,
     objLog,
-    safeReadFile,
 } from './fileUtils.js';
 
-import { readFileSync, writeFileSync } from "fs"
+import { readFileSync } from "fs"
 
-import { scrapeAcceptanceRate, scrapeDifficulty, scrapeProblem, scrapeSolutions } from './leetcodeScraper.js';
+import { scrapeProblem, scrapeSolutions } from './leetcodeScraper.js';
 import { createUserAnswerMessage, createUserQuestionMessage } from './gptApi.js';
 import { uploadImagesToS3 } from './s3Api.js';
 import { extractAnswer, questionTemplate, } from './prepareFlashcard.js';
@@ -79,9 +78,10 @@ async function main() {
     const problemUrlsSlice = problemUrls.slice(currentProblemIndex, lastBatchIndex)
     objLog({ currentProblemIndex, lastBatchIndex })
 
+    let count = 0
     for (const problemUrl of problemUrlsSlice) {
         if (isProcessed(PROCESSED_PATH, problemUrl)) continue // Necessary: dup urls might exist in other tags
-
+        if(count++ > 0) break // TEsting only
         const { question, answer } =
             await generateFlashcard({ browser, problemUrl, LANGUAGE })
         await updateSupermemoCard(SUPERMEMO_PATH, question, answer, problemUrl)
