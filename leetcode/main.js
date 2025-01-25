@@ -111,6 +111,9 @@ async function generateFlashcard({ browser, problemUrl, language }) {
     const answerResponse = await answerPrompt({ problemDifficulty, solutions, language })
 
     const imageDescription = extractSection(questionResponse, "Image Description", language)
+    // TODO remake upload to proper s3 bucket in memkey
+    // return urls instead of html
+    // when creating questionTemplate extract the ideal image for the problem
     const imageHtml = await getImageHtml(title, imageDescription, IMAGE_PATH)
     const youtubeUrls = await scrapeYoutubeVideoUrls(browser, SCRAPED_PATH, title, language)
 

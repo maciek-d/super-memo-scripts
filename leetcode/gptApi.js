@@ -1,5 +1,4 @@
 import axios from 'axios';
-import { writeFile } from 'fs/promises';
 import gptPkg from 'gpt3-tokenizer';
 const GPT3Tokenizer = gptPkg.default
 
@@ -40,7 +39,7 @@ export async function createImage(prompt) {
     return response.data[0].url
 }
 
-export function createUserAnswerMessage({ systemPrompt, solutions, problemDifficulty }) {
+export function createUserAnswerMessage({ systemPrompt, solutions }) {
 
     // Calculate remaining characters
     const paritalPrompt = `${systemPrompt}Solutions:\n\`\`\`\n\`\`\``
