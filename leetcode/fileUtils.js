@@ -108,15 +108,12 @@ export function extractAnswerSections(response, language) {
     const complexity = extractSection(response, "Time Complexity", language)
 
     const trick = extractSection(response, "Solution Trick", language)
-    const pitfalls = extractSection(response, "Common Mistakes", language)
-    const edgeCases = extractSection(response, "Edge Cases", language)
-    const intuition = extractSection(response, "Key Intuition", language)
     const DAS = algorithm + " - " + datastructure
 
     return {
         DAS, code, code2, steps, steps2,
         solution, solution2, complexity,
-        trick, pitfalls, edgeCases, intuition
+        trick,
     }
 }
 
@@ -160,24 +157,7 @@ export const extractFirstNumber = (str) => {
     return result ? parseInt(result[0]) : null; // Parse the first found number
 }
 
-export async function fetchGptImage(imageDescription, filePath) {
-    const imageExists = existsSync(filePath)
-    let image = imageExists ? readImage(filePath) : null
-
-
-    if (!imageExists) {
-        const url = await createImage(imageDescription)
-        image = await downloadImage(url)
-
-        writeFileSync(filePath, image)
-    } else {
-        console.log(`Reading image from ${filePath}`)
-    }
-
-    return image
-}
-
-function readImage(imagePath) {
+export function readImage(imagePath) {
     let imageData = null
     try {
         imageData = readFileSync(imagePath)

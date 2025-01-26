@@ -1,19 +1,16 @@
 import {
     appendObjectToFile, appendToProcessedUrls, isProcessed,
     gptRequest, readCachedUrls, writeCachedUrls, extractFirstNumber,
-    fetchGptImage, readByObjectKey,
-    extractSection,
+    readByObjectKey,
     extractSolutions,
     extractQuestionSections,
     objLog,
 } from './fileUtils.js';
 import { scrapeProblem, scrapeSolutions } from './leetcodeScraper.js';
 import { createUserAnswerMessage, createUserQuestionMessage } from './gptApi.js';
-import { uploadImagesToS3 } from './s3Api.js';
 import { extractAnswer, questionTemplate, } from './prepareFlashcard.js';
 
 import { readFileSync } from "fs"
-import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { mkdir } from 'fs/promises';
 
@@ -22,7 +19,11 @@ import puppeteer from 'puppeteer-extra';
 // Add stealth plugin and use it
 puppeteer.use(StealthPlugin());
 
+import { uploadFlashcard } from './memkeyApi.js';
+
+import { join, dirname } from 'path';
 import { config } from 'dotenv';
+import { from } from 'form-data';
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const envPath = join(__dirname, '../.env')
 config({ path: envPath })
@@ -39,17 +40,14 @@ const DATA_ROOT = `./data/${LANGUAGE}`
 const DATA_PATH = `${DATA_ROOT}/${TAG}`
 const IMAGE_PATH = `data/ai-images`
 const SCRAPED_PATH = `${DATA_PATH}/scraped`
-
+const MEMKEY_PATH = `data/memkey`
 const PROCESSED_PATH = 'data/processedNeetcode150.js'
 
 // TODO Testing:
 // Simplify the prompt for gpt
 // Important before you run. Split into two prompts for question and answer
 // Move unused sections and add them into hard questions only ... Figure out how to determine if question is hard
-// 1. Test that
-// how about in solutions ?? include in solutions
 // 2. Test the comments from different languages are removed but not from the language that is being processed
-// 3. Look through code again and see if anything else could be busted.
 
 async function main() {
     if (!LANGUAGE_OPTIONS.includes(LANGUAGE)) throw new Error(`${LANGUAGE} not found in ${LANGUAGE_OPTIONS}`)
@@ -80,9 +78,18 @@ async function main() {
     for (const problemUrl of problemUrlsSlice) {
         if (isProcessed(PROCESSED_PATH, problemUrl)) continue // Necessary: dup urls might exist in other tags
         if (count++ > 0) break // TEsting only
-        const { question, answer } =
+        const { question, answer, title } =
             await generateFlashcard({ browser, problemUrl, LANGUAGE })
 
+        // use memkeyFlashcardId to save the flashcard
+        const problemNumber = extractFirstNumber(title);
+        const memkeyPath = `${MEMKEY_PATH}/flashcards.js`
+        const memkeyFlashcard = { problemNumber, title, front: question, back: answer, problemUrl }
+        const memkeyFlashcardId = await uploadFlashcard(memkeyFlashcard)
+        if (!memkeyFlashcardId) throw new Error("No flashcard id returned")
+        console.log({ memkeyFlashcardId, problemUrl, front: front.substring(0, 10) });
+
+        appendObjectToFile(memkeyFlashcardId, memkeyFlashcard, memkeyPath)
         appendToProcessedUrls(PROCESSED_PATH, problemUrl)
         // Temporary solution to stop pages from buildig up
         const pages = await browser.pages()
@@ -91,10 +98,8 @@ async function main() {
         }
     }
     browser.close()
-
 }
 
-// TODO test with problem with images and solution with images
 async function generateFlashcard({ browser, problemUrl, language }) {
     const { title, descriptionSections, problemDifficulty } = await scrapeProblem(SCRAPED_PATH, browser, problemUrl)
     objLog({ title })
@@ -104,17 +109,11 @@ async function generateFlashcard({ browser, problemUrl, language }) {
     const questionResponse = await questionPrompt({ title, descriptionSections })
     const answerResponse = await answerPrompt({ problemDifficulty, solutions, language })
 
-    // TODO remake upload to proper s3 bucket in memkey
-    // return urls instead of html
-    // when creating questionTemplate extract the ideal image for the problem
-    const imageHtml = await getImageHtml(title, imageDescription, IMAGE_PATH)
     const youtubeUrls = await scrapeYoutubeVideoUrls(browser, SCRAPED_PATH, title, language)
 
     const solutionUrls = extractSolutions(answerResponse, solutions)
     const questionSections = extractQuestionSections(questionResponse, language)
     const question = questionTemplate({
-        title,
-        problemUrl,
         youtubeUrls,
         solutionUrls,
         imageHtml,
@@ -128,7 +127,7 @@ async function generateFlashcard({ browser, problemUrl, language }) {
         language
     })
 
-    return { question, answer }
+    return { question, answer, title }
 }
 
 async function questionPrompt({ title, descriptionSections }) {
@@ -141,36 +140,14 @@ async function questionPrompt({ title, descriptionSections }) {
     return questionResponse
 }
 
-async function answerPrompt({ title, problemDifficulty, solutions, language }) {
+async function answerPrompt({ title, solutions, language }) {
     const prompt = readFileSync(`data/answerPrompt.txt`, 'utf-8') + `\nIMPORTANT SELECT only solutions USING ${language}`
-    const hardAnswerPrompt = readFileSync(`data/hardAnswerPrompt.txt`, 'utf-8')
     // systemPrompt is used to calculate remaining characters
-    const isHard = problemDifficulty == "Hard"
-    const systemPrompt = isHard ? prompt + hardAnswerPrompt : prompt
+    const systemPrompt = prompt
 
     const answerMessage = createUserAnswerMessage({ systemPrompt, solutions })
     const answerResponse = await gptRequest({ title, systemPrompt: prompt, answerMessage, dataPath: `${DATA_PATH}/gptAnswerResponses.js` })
     return answerResponse
-}
-
-async function getImageHtml(title, imageDescription, imagePath) {
-    const imageName = `${extractFirstNumber(title)}.png`
-
-    if (!imageDescription) throw new Error(`Missing image description ${imageDescription}`)
-
-    const imageData = await fetchGptImage(imageDescription, `${imagePath}/${imageName}`)
-
-    const { imageSrc, thumbSrc } = await uploadImagesToS3(imageData, imageName, `leetcode/ai-generated`)
-
-    if (!imageSrc || !thumbSrc) {
-        throw new Error(`Failed to uploadImagesToS3 ${JSON.stringify
-            ({ imageName, imageData: imageData.subarray(0, 20) }, null, 2)}`
-        )
-    }
-    const imageHtml = `<div><a href="${imageSrc}" target="_blank">
-        <img src="${thumbSrc}" style="resize-img" /></a></div>`
-
-    return imageHtml
 }
 
 async function scrapeYoutubeVideoUrl(browser, queryString) {
@@ -183,9 +160,7 @@ async function scrapeYoutubeVideoUrl(browser, queryString) {
         const videoUrl = await page.evaluate(() => {
             const videoElements = Array.from(document.querySelectorAll('a#video-title'));
             for (const video of videoElements) {
-                if (/\d+\./.test(video.textContent)) { // Check if the title contains a number followed by a dot
-                    return video.href;
-                }
+                return video.href
             }
             return null;
         });
@@ -204,9 +179,9 @@ async function scrapeYoutubeVideoUrls(browser, scrapedPath, title, language) {
     const urls = readByObjectKey(youtubeUrlsPath, title)
     if (urls) return urls
 
-    // TODO remove neetcode
-    const youtubeUrl = await scrapeYoutubeVideoUrl(browser, `${title} neetcode`)
-    const youtubeUrlLang = await scrapeYoutubeVideoUrl(browser, `${title} ${language}`)
+    // TODO remove neetcode ?
+    const youtubeUrl = await scrapeYoutubeVideoUrl(browser, `Leetcode ${extractFirstNumber(title)} neetcode neetcode150`)
+    const youtubeUrlLang = await scrapeYoutubeVideoUrl(browser, `Leetcode ${extractFirstNumber(title)} ${title} ${language}`)
 
     if (!youtubeUrl || !youtubeUrlLang) {
         throw new Error(
@@ -228,6 +203,7 @@ async function setupDirs() {
     await mkdir(IMAGE_PATH, { recursive: true })
     await mkdir(SUPERMEMO_PATH, { recursive: true })
     await mkdir(SCRAPED_PATH, { recursive: true })
+    await mkdir(MEMKEY_PATH, { recursive: true })
 
     const DEBUG_PATH = `data/puppeteer_debug`
     await mkdir(DEBUG_PATH, { recursive: true })
