@@ -7,15 +7,12 @@ import {
     extractQuestionSections,
     objLog,
 } from './fileUtils.js';
-
-import { readFileSync } from "fs"
-
 import { scrapeProblem, scrapeSolutions } from './leetcodeScraper.js';
 import { createUserAnswerMessage, createUserQuestionMessage } from './gptApi.js';
 import { uploadImagesToS3 } from './s3Api.js';
 import { extractAnswer, questionTemplate, } from './prepareFlashcard.js';
-import { updateSupermemoCard } from './supermemoApi.js';
 
+import { readFileSync } from "fs"
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { mkdir } from 'fs/promises';
@@ -41,12 +38,12 @@ const LANGUAGE_OPTIONS = ["JavaScript", "C++", "Java", "Python3", "Python", "C",
 const DATA_ROOT = `./data/${LANGUAGE}`
 const DATA_PATH = `${DATA_ROOT}/${TAG}`
 const IMAGE_PATH = `data/ai-images`
-const SUPERMEMO_PATH = `data/supermemo`
 const SCRAPED_PATH = `${DATA_PATH}/scraped`
 
 const PROCESSED_PATH = 'data/processedNeetcode150.js'
 
 // TODO Testing:
+// Simplify the prompt for gpt
 // Important before you run. Split into two prompts for question and answer
 // Move unused sections and add them into hard questions only ... Figure out how to determine if question is hard
 // 1. Test that
@@ -74,17 +71,17 @@ async function main() {
     const arrayLength = problemUrls.length
     // const lastBatchIndex = endOfBatchIndex < arrayLength ?
     //     endOfBatchIndex : arrayLength
-    const lastBatchIndex = 40
+    const lastBatchIndex = 20 // keeps redoing the same 20 problems delete to do 20 at a time
+    // Create 20 at a time and just keep adding to course as you study
     const problemUrlsSlice = problemUrls.slice(currentProblemIndex, lastBatchIndex)
     objLog({ currentProblemIndex, lastBatchIndex })
 
     let count = 0
     for (const problemUrl of problemUrlsSlice) {
         if (isProcessed(PROCESSED_PATH, problemUrl)) continue // Necessary: dup urls might exist in other tags
-        if(count++ > 0) break // TEsting only
+        if (count++ > 0) break // TEsting only
         const { question, answer } =
             await generateFlashcard({ browser, problemUrl, LANGUAGE })
-        await updateSupermemoCard(SUPERMEMO_PATH, question, answer, problemUrl)
 
         appendToProcessedUrls(PROCESSED_PATH, problemUrl)
         // Temporary solution to stop pages from buildig up
@@ -97,10 +94,7 @@ async function main() {
 
 }
 
-// check if used and delete if not
-// fetchProblems.js
 // TODO test with problem with images and solution with images
-
 async function generateFlashcard({ browser, problemUrl, language }) {
     const { title, descriptionSections, problemDifficulty } = await scrapeProblem(SCRAPED_PATH, browser, problemUrl)
     objLog({ title })
@@ -110,7 +104,6 @@ async function generateFlashcard({ browser, problemUrl, language }) {
     const questionResponse = await questionPrompt({ title, descriptionSections })
     const answerResponse = await answerPrompt({ problemDifficulty, solutions, language })
 
-    const imageDescription = extractSection(questionResponse, "Image Description", language)
     // TODO remake upload to proper s3 bucket in memkey
     // return urls instead of html
     // when creating questionTemplate extract the ideal image for the problem
