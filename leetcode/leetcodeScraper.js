@@ -113,7 +113,7 @@ export async function scrapeProblem(scrapedPath, browser, problemUrl) {
         throw new Exception(`Title not found for ${problemUrl}`)
     }
     const problemDifficulty = await scrapeDifficulty(page)
-    const acceptanceRate  = await scrapeAcceptanceRate(page)
+    const acceptanceRate = await scrapeAcceptanceRate(page)
     await page.close();
 
     const descriptionSections = splitDescription(description)
@@ -152,7 +152,9 @@ export async function scrapeSolutions(scrapedPath, browser, language, solutionsU
     const solutionsFromFile = readByObjectKey(
         solutionsPath, solutionsUrl
     )
-    if (solutionsFromFile) return solutionsFromFile
+    if (solutionsFromFile) {
+        return solutionsFromFile
+    }
 
     const page = await browser.newPage();
     await page.goto(solutionsUrl, { waitUntil: 'domcontentloaded' });

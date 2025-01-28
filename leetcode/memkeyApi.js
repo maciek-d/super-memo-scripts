@@ -1,25 +1,22 @@
-const COURSE_ID = process.env.MEMKEY_COURSE_ID
-const MEMKEY_TOKEN = process.env.MEMKEY_TOKEN
-const MEMKEY_BACKEND_URL = process.env.MEMKEY_BACKEND_URL
 
 export async function uploadFlashcard({
     title, front, back, problemUrl
 }) {
-    const courseId = COURSE_ID
-    const authToken = MEMKEY_TOKEN
+    const courseId = process.env.MEMKEY_COURSE_ID
+    const authToken = process.env.MEMKEY_TOKEN
+    const backendUrl = process.env.MEMKEY_BACKEND_URL
+    console.log({ courseId, authToken, backendUrl })
     if (!courseId || !authToken) {
         console.error('Course ID or authentication token is missing.');
         return;
     }
-    const backendUrl = MEMKEY_BACKEND_URL
     const endpoint = `${backendUrl}/courses/${courseId}/lists`
     const method = 'POST'
 
     const payload = {
-        listId: list.id ?? null,
-        title: `<a href=${problemUrl} class="memkey-link">${title}</a>`,
+        title,
         items: [{
-            front, back
+            front, back, source: problemUrl
         }]
     };
 
@@ -37,7 +34,7 @@ export async function uploadFlashcard({
     }
 
     const data = await response.json();
-    const { flashcardId } = data?.successful?.[0]?.flashcards ?? {}
+    const { flashcardId } = data?.successful?.[0]?.flashcards?.[0] ?? {}
     return flashcardId
 }
 

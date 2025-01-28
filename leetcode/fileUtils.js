@@ -1,5 +1,5 @@
 import { existsSync, readFileSync, writeFileSync } from "fs"
-import { createImage, downloadImage, promptChatGpt } from "./gptApi.js"
+import { promptChatGpt } from "./gptApi.js"
 
 export function readCachedUrls(dataPath, tag) {
     const problemUrlCachePath = `${dataPath}/problemUrls/${tag}.js`
@@ -9,7 +9,7 @@ export function readCachedUrls(dataPath, tag) {
         JSON.parse(safeReadFile(problemUrlCachePath)) : null
 
     const premiumProblemUrls = existsSync(premiumProblemUrlCachePath) ?
-        JSON.parse(safeReadFile(premiumProblemUrlCachePath)) : null
+        JSON.parse(safeReadFile(premiumProblemUrlCachePath)) : []
 
     if (problemUrls)
         return { problemUrls, premiumProblemUrls }
@@ -53,12 +53,12 @@ export function appendObjectToFile(key, object, path) {
 export async function gptRequest({
     title, systemPrompt, userMessage, dataPath
 }) {
-    const responseFromFile = readByObjectKey(`${dataPath}`, title)
+    const responseFromFile = readByObjectKey(dataPath, title)
     if (responseFromFile) console.log({ responseFromFile: responseFromFile?.slice(0, 200) })
     const response = responseFromFile ??
         (await promptChatGpt(systemPrompt, userMessage))
 
-    appendObjectToFile(title, response, `${dataPath}/gptResponses.js`)
+    appendObjectToFile(title, response, dataPath)
     return response
 }
 

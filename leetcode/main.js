@@ -23,7 +23,6 @@ import { uploadFlashcard } from './memkeyApi.js';
 
 import { join, dirname } from 'path';
 import { config } from 'dotenv';
-import { from } from 'form-data';
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const envPath = join(__dirname, '../.env')
 config({ path: envPath })
@@ -52,9 +51,9 @@ const PROCESSED_PATH = 'data/processedNeetcode150.js'
 async function main() {
     if (!LANGUAGE_OPTIONS.includes(LANGUAGE)) throw new Error(`${LANGUAGE} not found in ${LANGUAGE_OPTIONS}`)
     await setupDirs()
-    const browser = await puppeteer.launch({ headless: "new" })
+    // const browser = await puppeteer.launch({ headless: "new" })
 
-    // const browser = await puppeteer.launch({ headless: false })
+    const browser = await puppeteer.launch({ headless: false })
 
     const { problemUrls, premiumProblemUrls } =
         readCachedUrls(`data`, TAG)
@@ -63,6 +62,8 @@ async function main() {
 
     writeCachedUrls(problemUrls, premiumProblemUrls, `data`, TAG)
 
+
+    console.log(problemUrls.length)
     const currentProblemIndex = getCurrentIndex(problemUrls)
 
     const endOfBatchIndex = currentProblemIndex + BATCH_SIZE
@@ -78,16 +79,19 @@ async function main() {
     for (const problemUrl of problemUrlsSlice) {
         if (isProcessed(PROCESSED_PATH, problemUrl)) continue // Necessary: dup urls might exist in other tags
         if (count++ > 0) break // TEsting only
-        const { question, answer, title } =
-            await generateFlashcard({ browser, problemUrl, LANGUAGE })
+        const { question: front, answer: back, title } =
+            await generateFlashcard({ browser, problemUrl, language: LANGUAGE })
 
         // use memkeyFlashcardId to save the flashcard
         const problemNumber = extractFirstNumber(title);
         const memkeyPath = `${MEMKEY_PATH}/flashcards.js`
-        const memkeyFlashcard = { problemNumber, title, front: question, back: answer, problemUrl }
+        const memkeyFlashcard = { problemNumber, title, front, back, problemUrl }
         const memkeyFlashcardId = await uploadFlashcard(memkeyFlashcard)
         if (!memkeyFlashcardId) throw new Error("No flashcard id returned")
-        console.log({ memkeyFlashcardId, problemUrl, front: front.substring(0, 10) });
+        console.log({
+            memkeyFlashcardId, problemUrl,
+            front: front.substring(0, 10), back: back.substring(0, 10)
+        });
 
         appendObjectToFile(memkeyFlashcardId, memkeyFlashcard, memkeyPath)
         appendToProcessedUrls(PROCESSED_PATH, problemUrl)
@@ -116,7 +120,6 @@ async function generateFlashcard({ browser, problemUrl, language }) {
     const question = questionTemplate({
         youtubeUrls,
         solutionUrls,
-        imageHtml,
         descriptionSections,
         questionSections,
     })
@@ -135,18 +138,15 @@ async function questionPrompt({ title, descriptionSections }) {
 
     const systemPrompt = readFileSync(`data/questionPrompt.txt`, 'utf-8')
     const questionMessage = createUserQuestionMessage({ statement, ioExamples })
-    const questionResponse = await gptRequest({ title, systemPrompt, questionMessage, dataPath: `${DATA_PATH}/gptQuestionResponses.js` })
-
+    const questionResponse = await gptRequest({ title, systemPrompt, userMessage: questionMessage, dataPath: `${DATA_PATH}/gptQuestionResponses.js` })
     return questionResponse
 }
 
 async function answerPrompt({ title, solutions, language }) {
-    const prompt = readFileSync(`data/answerPrompt.txt`, 'utf-8') + `\nIMPORTANT SELECT only solutions USING ${language}`
+    const systemPrompt = readFileSync(`data/answerPrompt.txt`, 'utf-8') + `\nIMPORTANT SELECT only solutions USING ${language}`
     // systemPrompt is used to calculate remaining characters
-    const systemPrompt = prompt
-
     const answerMessage = createUserAnswerMessage({ systemPrompt, solutions })
-    const answerResponse = await gptRequest({ title, systemPrompt: prompt, answerMessage, dataPath: `${DATA_PATH}/gptAnswerResponses.js` })
+    const answerResponse = await gptRequest({ title, systemPrompt, userMessage: answerMessage, dataPath: `${DATA_PATH}/gptAnswerResponses.js` })
     return answerResponse
 }
 
@@ -182,6 +182,7 @@ async function scrapeYoutubeVideoUrls(browser, scrapedPath, title, language) {
     // TODO remove neetcode ?
     const youtubeUrl = await scrapeYoutubeVideoUrl(browser, `Leetcode ${extractFirstNumber(title)} neetcode neetcode150`)
     const youtubeUrlLang = await scrapeYoutubeVideoUrl(browser, `Leetcode ${extractFirstNumber(title)} ${title} ${language}`)
+    objLog({ youtubeUrl, youtubeUrlLang })
 
     if (!youtubeUrl || !youtubeUrlLang) {
         throw new Error(
@@ -201,7 +202,6 @@ async function setupDirs() {
     await mkdir(DATA_ROOT, { recursive: true })
     await mkdir(DATA_PATH, { recursive: true })
     await mkdir(IMAGE_PATH, { recursive: true })
-    await mkdir(SUPERMEMO_PATH, { recursive: true })
     await mkdir(SCRAPED_PATH, { recursive: true })
     await mkdir(MEMKEY_PATH, { recursive: true })
 
@@ -212,7 +212,7 @@ async function setupDirs() {
 function getCurrentIndex(problemUrls) {
     let count = 0
     for (const problemUrl of problemUrls) {
-        if (!isProcessed(`data`, problemUrl)) break
+        if (!isProcessed(PROCESSED_PATH, problemUrl)) break
         count++
     }
     return count
