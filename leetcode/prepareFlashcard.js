@@ -1,5 +1,9 @@
 import { extractAnswerSections } from "./fileUtils.js";
 
+function replaceNewLinesWithBrTags(sections) {
+
+}
+
 export function extractAnswer({
     solutionUrls,
     gptResponse,
@@ -8,20 +12,21 @@ export function extractAnswer({
     const { solutionsUrl1, solutionsUrl2 } = solutionUrls
     const sections = extractAnswerSections(gptResponse, language)
 
+    replaceNewLinesWithBrTags(sections)
     // Format the answer string
     const answer =
         `<b><a href="${solutionsUrl1}" class="memkey-link" >${sections.trick}</a></b>
-<div class="text-container"><br/>${sections.solution}<br/><br/></div>
+<div class="memkey-hide"><br/>${sections.solution}<br/><br/></div>
 <div>${sections.code}</div>
 <div>${sections.steps}</div>
-<div class="text-container">
+<div class="memkey-hide">
     <div>${sections.code2}</div>
     <div>${sections.steps2}</div>
     <a href="${solutionsUrl2}" class="memkey-link" ><div>[1]</div></a>
     <div>${sections.solution2}</div>
 </div>
 <div><br/>${sections.DAS}<br/><br/></div>
-<div class="text-container"><br/>${sections.complexity}</div>`
+<div class="memkey-hide"><br/>${sections.complexity}</div>`
 
     return answer;
 }
@@ -35,7 +40,8 @@ export function questionTemplate({
     youtubeUrls,
     solutionUrls,
     descriptionSections,
-    questionSections
+    questionSections,
+    language
 }) {
     const { solutionsUrl1, solutionsUrl2 } = solutionUrls
 
@@ -50,20 +56,24 @@ export function questionTemplate({
 
     const question =
         `<div>${summary}</div>
-<div class="text-container"><br/>${description}<br/><br/></div>
+<div class="memkey-hide"><br/>${description}<br/><br/></div>
 <div>${bestIoExample}</div>
-<div class="text-container"><br/>${ioExamples}<br/></div>
-<div class="text-container"><br/>${constraints}<br/></div>
+<div class="memkey-hide"><br/>${ioExamples}<br/></div>
+<div class="memkey-hide"><br/>${constraints}<br/></div>
 <span>
-<a href="${youtubeUrl}" >
-  <img src="https://memkey.s3.us-west-1.amazonaws.com/media/images/youtube_32.png"/>
-</a>
-${language}: <a href="${youtubeUrlLang}" >
-  <img src="https://memkey.s3.us-west-1.amazonaws.com/media/images/youtube_32.png"/>
-</a>
-Solutions:
-        <a href="${solutionsUrl1}" class="memkey-link">[1]</a><br/>
-        <a href="${solutionsUrl2}" class="memkey-link">[2]</a>
+  <span>
+    <a href="${youtubeUrl}" >
+    <img src="https://memkey.s3.us-west-1.amazonaws.com/media/images/youtube_32.png"/>
+    </a>
+    ${language}: <a href="${youtubeUrlLang}" >
+    <img src="https://memkey.s3.us-west-1.amazonaws.com/media/images/youtube_32.png"/>
+    </a>
+  </span>
+  <span>
+    Solutions:
+    <a href="${solutionsUrl1}" class="memkey-link">[1]</a><br/>
+    <a href="${solutionsUrl2}" class="memkey-link">[2]</a>
+  </span>
 </span>`;
     return question
 }

@@ -2,7 +2,7 @@ import {
     appendObjectToFile, appendToProcessedUrls, isProcessed,
     gptRequest, readCachedUrls, writeCachedUrls, extractFirstNumber,
     readByObjectKey,
-    extractSolutions,
+    extractSolutionsFromIndexes,
     extractQuestionSections,
     objLog,
 } from './fileUtils.js';
@@ -105,23 +105,24 @@ async function main() {
 }
 
 async function generateFlashcard({ browser, problemUrl, language }) {
-    const { title, descriptionSections, problemDifficulty } = await scrapeProblem(SCRAPED_PATH, browser, problemUrl)
+    const { title, descriptionSections } = await scrapeProblem(SCRAPED_PATH, browser, problemUrl)
     objLog({ title })
 
     const solutions = await scrapeSolutions(SCRAPED_PATH, browser, language, `${problemUrl}/solutions/`)
 
     const questionResponse = await questionPrompt({ title, descriptionSections })
-    const answerResponse = await answerPrompt({ problemDifficulty, solutions, language })
+    const answerResponse = await answerPrompt({ title, solutions, language })
 
     const youtubeUrls = await scrapeYoutubeVideoUrls(browser, SCRAPED_PATH, title, language)
 
-    const solutionUrls = extractSolutions(answerResponse, solutions)
+    const solutionUrls = extractSolutionsFromIndexes(answerResponse, solutions)
     const questionSections = extractQuestionSections(questionResponse, language)
     const question = questionTemplate({
         youtubeUrls,
         solutionUrls,
         descriptionSections,
         questionSections,
+        language
     })
 
     const answer = extractAnswer({

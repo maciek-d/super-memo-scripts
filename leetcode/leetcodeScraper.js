@@ -128,12 +128,21 @@ function getTextWithImageTags(element) {
     const TEXT_NODE = 3;
     const ELEMENT_NODE = 1;
 
+    const preserveTags = ['PRE', 'CODE', 'SAMP', 'KBD'];
+    const blockTags = ['BR', 'DIV', 'P', 'LI', 'TABLE', 'TR', 'TD', 'TH', 'BLOCKQUOTE'];
+
     return Array.from(element.childNodes)
         .map(node => {
             if (node.nodeType === TEXT_NODE) {
                 return node.textContent.trim();
             }
             if (node.nodeType === ELEMENT_NODE) {
+                if (preserveTags.includes(node.tagName)) {
+                    return node.outerHTML; // Keep the entire tag and its content
+                }
+                if (blockTags.includes(node.tagName)) {
+                    return '\n' + getTextWithImageTags(node) + '\n'; // Add newlines around content
+                }
                 // If it's an IMG tag, check src and unwanted categories
                 if (node.tagName === 'IMG' && node.src &&
                     !["avatar", "badges", "static_assets"].some(val => node.src.includes(val))) {

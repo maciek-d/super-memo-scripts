@@ -62,7 +62,7 @@ export async function gptRequest({
     return response
 }
 
-export function extractSolutions(response, solutions) {
+export function extractSolutionsFromIndexes(response, solutions) {
     const [gptSolutionIndex, gptSolutionIndex2] = extractProblemIndex(response)
     const keys = Object.keys(solutions)
     const solutionsUrl1 = keys[gptSolutionIndex]
@@ -76,38 +76,174 @@ export function extractSolutions(response, solutions) {
     return { solutionsUrl1, solutionsUrl2 }
 }
 
+export function parseSections(text, headingsToExtract, language) {
+    /************************************************
+     * 1) Minimal code-block stripper (unchanged)
+     ************************************************/
+    function stripCodeBlocks(input, lang) {
+        const lowerLang = (lang || '').toLowerCase();
+        const re = new RegExp('```' + lowerLang + '\\n([\\s\\S]*?)\\n\\s*```', 'g');
+        return input.replace(re, (_match, codeInner) => {
+            return codeInner.replace(/^ +/gm, spaces => spaces.replace(/ /g, '&nbsp;'));
+        });
+    }
+
+    /************************************************
+     * 2) Helper to find the earliest index of
+     *    heading patterns for "headingName"
+     ************************************************/
+    function findHeadingIndex(source, startIndex, headingName) {
+        const patterns = [];
+
+        // Up to 6 # signs, plus a space, plus headingName
+        for (let i = 1; i <= 6; i++) {
+            patterns.push('#'.repeat(i) + ' ' + headingName);
+            patterns.push('#'.repeat(i) + ' ' + headingName + ':');
+        }
+
+        // Double-star patterns
+        patterns.push(`**${headingName}**`);
+        patterns.push(`**${headingName}**:`);
+
+        let foundIndex = -1;
+        for (const pat of patterns) {
+            const idx = source.toLowerCase().indexOf(pat.toLowerCase(), startIndex);
+            if (idx !== -1 && (foundIndex === -1 || idx < foundIndex)) {
+                foundIndex = idx;
+            }
+        }
+        return foundIndex;
+    }
+
+    /************************************************
+     * 3) Skip just the heading pattern text
+     *    (plus an optional trailing colon/spaces),
+     *    returning the index where content begins.
+     ************************************************/
+    function skipHeadingPattern(source, headingIndex, headingName) {
+        // We'll advance from headingIndex through any # or * or space,
+        // then the headingName, then optional ':'.
+        let i = headingIndex;
+
+        // 1) Skip leading '#' or '*' or spaces
+        while (i < source.length && /[#*\s]/.test(source[i])) {
+            i++;
+        }
+
+        // 2) Skip exactly headingName.length characters (the heading text)
+        //    (since we matched ignoring case, but we'll assume the length is consistent).
+        i += headingName.length;
+        while (i < source.length && source[i] === '*') {
+            i++;
+        }
+
+        // 3) If there's a colon, skip it + any following spaces
+        if (source[i] === ':') {
+            i++;
+            while (i < source.length && source[i] === ' ') {
+                i++;
+            }
+        }
+
+        // skip new lines at start
+        if (i < source.length && source[i] === '\n') {
+            i++;
+        }
+
+        // Now i is at the start of the actual content (which might be on the same line!)
+        return i;
+    }
+
+    /************************************************
+     * 4) The main logic
+     ************************************************/
+    let searchStart = 0;
+    const results = [];
+
+    for (let i = 0; i < headingsToExtract.length; i++) {
+        const headingName = headingsToExtract[i];
+        const lowerHeading = headingName.toLowerCase();
+
+        // A) Find this heading in text
+        const headingIndex = findHeadingIndex(text, searchStart, lowerHeading);
+        if (headingIndex === -1) {
+            throw new Error(`Heading not found: "${headingName}"`);
+        }
+
+        // B) Skip the heading pattern (including optional colon/spaces)
+        const afterHeadingIndex = skipHeadingPattern(text, headingIndex, lowerHeading);
+
+        // C) Find the next heading (if any)
+        let nextHeadingIndex = -1;
+        if (i < headingsToExtract.length - 1) {
+            const nextHeadingName = headingsToExtract[i + 1].toLowerCase();
+            nextHeadingIndex = findHeadingIndex(text, afterHeadingIndex, nextHeadingName);
+        }
+
+        const contentEnd = (nextHeadingIndex === -1) ? text.length : nextHeadingIndex;
+
+        // D) Extract substring as the content
+        let content = text.slice(afterHeadingIndex, contentEnd);
+
+        // Remove trailing number
+        content = content.replace(/\d+\.\s*$/, '');
+
+        // Trim trailing whitespace and extra <br/>
+        content = content.replace(/(<br\/>\s*)+$/, '').trim();
+        console.log({ [headingName]: content })
+        // E) Cleanup
+        content = stripCodeBlocks(content, language)
+            .replace(/\n/g, '<br/>')
+            .replace(/\*\*(.*?)\*\*/g, '<b>$1</b>');
+
+        if (!content.trim()) {
+            throw new Error(`Section "${headingName}" is empty`);
+        }
+
+        results.push(content);
+
+        // Move searchStart so we don't find the same heading again
+        searchStart = contentEnd;
+    }
+
+    return results;
+}
+
 export function extractQuestionSections(response, language) {
     response = response
         .replaceAll("&lt;", "＜")
         .replaceAll("&gt;", "＞")
         .replace(/<(?!img|\/img)/gi, '＜')
-    const summary = extractSection(response, "Summary", language)
-    const description = extractSection(response, "Description", language)
-    const bestIoExample = extractSection(response, "I\/O", language)
 
+    const headings = ["Summary", "Description", "I\/O"]
+    const [summary, description, bestIoExample] = parseSections(response, headings, language);
     return {
         summary, description, bestIoExample,
     }
 }
 
 export function extractAnswerSections(response, language) {
-
     response = response
         .replaceAll("&lt;", "＜")
         .replaceAll("&gt;", "＞")
         .replace(/<(?!img|\/img)/gi, '＜')
 
-    const algorithm = extractSection(response, "Problem Algorithm", language)
-    const datastructure = extractSection(response, "Problem Datastructure", language)
-    const code = extractSection(response, "Primary Solution Code", language)
-    const code2 = extractSection(response, "Secondary Solution Code", language)
-    const steps = extractSection(response, "Enumerated Steps 1", language)
-    const steps2 = extractSection(response, "Enumerated Steps 2", language)
-    const solution = extractSection(response, "Solution 1", language)
-    const solution2 = extractSection(response, "Solution 2", language)
-    const complexity = extractSection(response, "Time Complexity", language)
+    const headings = [
+        "Problem Algorithm", "Problem Datastructure", "Solution Trick",
+        "Pseudocode/Algorithm Steps",
+        "Primary Solution Code", "Enumerated Steps 1", "Solution 1",
+        "Secondary Solution Code", "Enumerated Steps 2", "Solution 2",
+        "Time Complexity", "Selected Solutions"
+    ];
 
-    const trick = extractSection(response, "Solution Trick", language)
+    const [
+        algorithm, datastructure, trick,
+        _pseudocode,
+        code, steps, solution,
+        code2, steps2, solution2,
+        complexity
+    ] = parseSections(response, headings, language);
+
     const DAS = algorithm + " - " + datastructure
 
     return {
@@ -168,67 +304,6 @@ export function readImage(imagePath) {
         throw e
     }
     return Buffer.from(imageData);
-}
-
-function stripCodeBlocks(text, language) {
-    const regex = new RegExp(`\`\`\`${language.toLowerCase()}\n([\\s\\S]*?)\n\\s*\`\`\``, 'g');
-    return text.replace(regex, (_match, p1) => {
-        // Replace spaces at the start of each line within the code block
-        const replaced = p1.replace(/^ +/gm, (spaces) => spaces.replace(/ /g, '&nbsp;'));
-        return replaced;
-    });
-}
-
-export function extractSection(text, sectionTitle, language) {
-    const lines = text.split('\n');
-    let capturing = false;
-    let section = [];
-    const headerRegexHash = new RegExp(`^.*#+ ${sectionTitle}`, 'i');
-    const headerRegexAsterisks = new RegExp(`^.*\\*\\*${sectionTitle}.?\\*\\*`, 'i');
-
-    const hashTitleExists = lines.some(line => headerRegexHash.test(line.trim()));
-
-    const sectionHeaderRegex = hashTitleExists ? headerRegexHash : headerRegexAsterisks;
-    for (const line of lines) {
-        // Check for start of the section
-        if (sectionHeaderRegex.test(line.trim())) {
-            // Account for section text on the same line
-            const content = line
-                .trim()
-                .replace(sectionHeaderRegex, '')
-                .trim()
-                .replace(/^\s*:\s*/, '')
-            if (content) {
-                section.push(content)
-            }
-            capturing = true;
-            continue;
-        }
-
-        // Check for end of the section (next header starting with ##)
-        if (section.length !== 0 && capturing &&
-            (
-                line.trim().startsWith('##') ||
-                (!hashTitleExists && /.*\*\*/.test(line.trim()))
-            )
-        ) {
-            break;
-        }
-
-        if (capturing) {
-            section.push(line);
-        }
-    }
-
-    if (section.length === 0) {
-        throw new Error(`couldnt find blocks for section ${sectionTitle}`)
-    }
-
-    const formattedSection = stripCodeBlocks(section.join('\n').trim(), language)
-        .replaceAll("\n", "<br/>")
-        .replace(/\*\*(.*?)\*\*/g, '<b>$1</b>')
-    if (!formattedSection) throw new Error(`Section ${sectionTitle} empty or missing`)
-    return formattedSection
 }
 
 export function safeReadFile(path) {
