@@ -40,6 +40,9 @@ export async function createImage(prompt) {
 }
 
 export function createUserAnswerMessage({ systemPrompt, solutions }) {
+    function collapseWhitespace(text) {
+        return text.replace(/\n{2,}/g, '\n').trim(); // Replaces 2+ newlines with a single one
+    }
 
     // Calculate remaining characters
     const paritalPrompt = `${systemPrompt}Solutions:\n\`\`\`\n\`\`\``
@@ -57,8 +60,9 @@ export function createUserAnswerMessage({ systemPrompt, solutions }) {
 
     if (solutionsTokens > remaining) {
         solutions = Object.fromEntries(
-            Object.entries(solutions).map(([url, sol]) => [url, trimAfterFirstComment(sol)])
+            Object.entries(solutions).map(([url, sol]) => [url, trimAfterFirstComment(collapseWhitespace(sol))])
         );
+
 
         let lengthFirstComment = getSolutionsLength(solutions)
         while (lengthFirstComment > remaining) {
