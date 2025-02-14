@@ -68,9 +68,9 @@ async function main() {
 
     const endOfBatchIndex = currentProblemIndex + BATCH_SIZE
     const arrayLength = problemUrls.length
-    // const lastBatchIndex = endOfBatchIndex < arrayLength ?
-    //     endOfBatchIndex : arrayLength
-    const lastBatchIndex = 20 // keeps redoing the same 20 problems delete to do 20 at a time
+    const lastBatchIndex = endOfBatchIndex < arrayLength ?
+        endOfBatchIndex : arrayLength
+    // const lastBatchIndex = 20 // keeps redoing the same 20 problems delete to do 20 at a time
     // Create 20 at a time and just keep adding to course as you study
     const problemUrlsSlice = problemUrls.slice(currentProblemIndex, lastBatchIndex)
     objLog({ currentProblemIndex, lastBatchIndex })
@@ -78,7 +78,7 @@ async function main() {
     let count = 0
     for (const problemUrl of problemUrlsSlice) {
         if (isProcessed(PROCESSED_PATH, problemUrl)) continue // Necessary: dup urls might exist in other tags
-        if (count++ > 0) break // TEsting only
+        //  if (count++ > 0) break // TEsting only
         const { question: front, answer: back, title } =
             await generateFlashcard({ browser, problemUrl, language: LANGUAGE })
 
@@ -180,8 +180,8 @@ async function scrapeYoutubeVideoUrls(browser, scrapedPath, title, language) {
     const urls = readByObjectKey(youtubeUrlsPath, title)
     if (urls) return urls
 
-    // TODO remove neetcode ?
-    const youtubeUrl = await scrapeYoutubeVideoUrl(browser, `Leetcode ${extractFirstNumber(title)} neetcode neetcode150`)
+    // TODO remove 150
+    const youtubeUrl = await scrapeYoutubeVideoUrl(browser, `Leetcode ${extractFirstNumber(title)} @neetcode NeetCode 150`)
     const youtubeUrlLang = await scrapeYoutubeVideoUrl(browser, `Leetcode ${extractFirstNumber(title)} ${title} ${language}`)
     objLog({ youtubeUrl, youtubeUrlLang })
 

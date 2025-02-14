@@ -65,8 +65,9 @@ export async function gptRequest({
 export function extractSolutionsFromIndexes(response, solutions) {
     const [gptSolutionIndex, gptSolutionIndex2] = extractProblemIndex(response)
     const keys = Object.keys(solutions)
-    const solutionsUrl1 = keys[gptSolutionIndex]
-    const solutionsUrl2 = keys[gptSolutionIndex2]
+    const modifier = gptSolutionIndex == 0 ? 0 : 1
+    const solutionsUrl1 = keys[gptSolutionIndex - modifier]
+    const solutionsUrl2 = keys[gptSolutionIndex2 - modifier]
 
     if (!solutionsUrl1 || !solutionsUrl2) {
         throw new Error(
@@ -256,36 +257,25 @@ export function extractAnswerSections(response, language) {
 function extractProblemIndex(response) {
     const sectionTitle = "SelectedSolutions";
 
-    // regex matches titles starting with ##+ or **
-    const hashRegex = new RegExp(`#{1,6}\\s*${sectionTitle}\\s*\\[\\s*([\\d,\\s]+)\\s*\\]`, 'i');
-    const asteriskRegex = new RegExp(`\\*\\*${sectionTitle}\\*\\*.*?\\[\\s*([\\d,\\s]+)\\s*\\]`, 'i');
+    // Remove all whitespace
+    const noWhiteSpaces = response.replace(/\s+/g, '');
 
-    const noCodeBlocks = response
-        .replace(/```javascript\n([\s\S] *?) \n\s * ```/g, (_match, p1) => {
-            return p1
-        }).replace(/```json\n([\s\S] *?) \n\s * ```/g, (_match, p1) => {
-            return p1
-        }).replace(/```\s * ([\s\S] *?) \s * ```/g, (_match, p1) => {
-            return p1
-        })
+    // Match up to 5 characters before sectionTitle, then extract [numbers]
+    const hashRegex = new RegExp(`#{1,6}.{0,5}${sectionTitle}.*?(\\[[^\\]]+\\])`, 'i');
+    const asteriskRegex = new RegExp(`\\*\\*.{0,5}${sectionTitle}.*?(\\[[^\\]]+\\])`, 'i');
 
-    const cleanedResponse = noCodeBlocks
-        .replaceAll(":", "")
-        .replaceAll("\\", "")
-        .replaceAll("\n", "")
-        .replaceAll(" ", "")
-
-    const hashMatch = hashRegex.exec(cleanedResponse)
-    const asteriskMatch = asteriskRegex.exec(cleanedResponse)
-    const match = hashMatch ? hashMatch : asteriskMatch
+    // Run the regex on the whitespace-free response
+    const hashMatch = hashRegex.exec(noWhiteSpaces);
+    const asteriskMatch = asteriskRegex.exec(noWhiteSpaces);
+    const match = hashMatch || asteriskMatch;
 
     if (match && match[1]) {
-        const indices = match[1].split(',').map(item => Number(item.trim()) - 1);
-        return indices;
+        const cleanedNumbers = match[1].replace(/[^0-9,]/g, '');
+        return JSON.parse(`[${cleanedNumbers}]`) // Return the extracted [*,*] array
     }
 
-    objLog({ cleanedResponse })
-    throw new Error(`Failed match index regex ${hashRegex} and ${asteriskRegex}`)
+    objLog({ noWhiteSpaces })
+    throw new Error(`Failed to match index regex: ${hashRegex} and ${asteriskRegex}`);
 }
 
 export const extractFirstNumber = (str) => {

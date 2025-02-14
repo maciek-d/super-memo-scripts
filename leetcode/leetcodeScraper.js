@@ -138,7 +138,7 @@ function getTextWithImageTags(element) {
             }
             if (node.nodeType === ELEMENT_NODE) {
                 if (preserveTags.includes(node.tagName)) {
-                    return node.outerHTML; // Keep the entire tag and its content
+                    return '\n' + getTextWithImageTags(node) + '\n'; // Add newlines around content
                 }
                 if (blockTags.includes(node.tagName)) {
                     return '\n' + getTextWithImageTags(node) + '\n'; // Add newlines around content
