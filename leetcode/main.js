@@ -174,14 +174,15 @@ async function scrapeYoutubeVideoUrl(browser, queryString) {
     }
 }
 
-async function scrapeYoutubeVideoUrls(browser, scrapedPath, title, language) {
+export async function scrapeYoutubeVideoUrls(browser, scrapedPath, title, language) {
 
     const youtubeUrlsPath = `${scrapedPath}/youtubeUrls.js`
     const urls = readByObjectKey(youtubeUrlsPath, title)
-    if (urls) return urls
+    // TODO LOG AND PAUSE HERE
+    // if (urls) return urls
 
     // TODO remove 150
-    const youtubeUrl = await scrapeYoutubeVideoUrl(browser, `Leetcode ${extractFirstNumber(title)} @neetcode NeetCode 150`)
+    const youtubeUrl = await scrapeYoutubeVideoUrl(browser, `Leetcode ${title} ${extractFirstNumber(title)} @neetcode NeetCode 150`)
     const youtubeUrlLang = await scrapeYoutubeVideoUrl(browser, `Leetcode ${extractFirstNumber(title)} ${title} ${language}`)
     objLog({ youtubeUrl, youtubeUrlLang })
 

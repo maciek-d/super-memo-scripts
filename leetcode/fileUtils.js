@@ -1,4 +1,4 @@
-import { existsSync, readFileSync, writeFileSync } from "fs"
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs"
 import { promptChatGpt } from "./gptApi.js"
 
 export function readCachedUrls(dataPath, tag) {
@@ -210,6 +210,29 @@ export function parseSections(text, headingsToExtract, language) {
     return results;
 }
 
+export function extractYoutubeResponseSections(response, language) {
+    const headings = [
+        "Description Summary",
+        "Description",
+        "Brute Force Solution",
+        "Optimal Solution",
+        "Solution Trick",
+        "Common Mistakes"
+    ]
+    const [
+        summary,
+        description,
+        bruteForce,
+        optimal,
+        trick,
+        commonMistakes
+    ] = parseSections(response, headings, language);
+    return {
+        summary, description, bruteForce,
+        optimal, trick, commonMistakes
+    }
+}
+
 export function extractQuestionSections(response, language) {
     response = response
         .replaceAll("&lt;", "＜")
@@ -334,4 +357,11 @@ export function splitDescription(description) {
 
 export function objLog(obj) {
     console.log(JSON.stringify(obj))
+}
+
+export function ensureDirectoryExists(dirPath) {
+    if (!existsSync(dirPath)) {
+        mkdirSync(dirPath, { recursive: true });
+        console.log(`Created directory: ${dirPath}`);
+    }
 }

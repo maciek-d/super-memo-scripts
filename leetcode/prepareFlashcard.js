@@ -99,7 +99,7 @@ function extractImageTags(sourceText) {
 }
 
 
-function modifyImagesInPlace(text) {
+export function modifyImagesInPlace(text) {
     return text.replace(/<img ([^>]*src="[^"]*"[^>]*)>/g, (_match, p1) => {
         const srcMatch = p1.match(/src="([^"]*)"/);
         const src = srcMatch ? srcMatch[1] : '';
