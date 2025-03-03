@@ -85,12 +85,12 @@ async function main() {
     const browser = await puppeteer.launch({ headless: "new" })
 
     const language = LANGUAGE
+
     for (const problemUrl of problemUrlsSlice) {
         if (isProcessed(PROCESSED_PATH, problemUrl)) continue // Necessary: dup urls might exist in other tags
 
         const { title, descriptionSections } = await scrapeProblem(SCRAPED_PATH, browser, problemUrl)
         console.log({ title })
-        await waitForEnterKey()
         const solutionsByUrl = await scrapeSolutions(SCRAPED_PATH, browser, language, `${problemUrl}/solutions/`)
         const solutionUrl = Object.keys(solutionsByUrl)?.[0] ?? ""
 
@@ -126,11 +126,14 @@ async function main() {
             listThumbUrl: listImage,
         })
 
+        console.log("Override currentListFlashcards.js")
+        await waitForEnterKey()
         const currentFlashcardsPath = `data/memkey/currentListFlashcards.js`
         const modelListFlashcardsPath = `data/memkey/4oFlashcards.js`
         const fixedListFlashcardsPath = `data/memkey/fixedFlashcards.js`
         appendObjectToFile(title, listFlashcards, modelListFlashcardsPath)
         writeArrayToFile(listFlashcards, currentFlashcardsPath)
+        console.log("Press enter after fixing the flashcard data")
         await waitForEnterKey()
 
         const newListFlashcards = readArrayFromFile(currentFlashcardsPath)
