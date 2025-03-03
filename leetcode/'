@@ -1,0 +1,76 @@
+export default [
+    {
+        "topicLabels": [
+            "Description Summary",
+            "Description",
+            "Examples",
+            "Brute Force Solution"
+        ],
+        "front": "<div class=\"memkey-align-left\">\n    <a href=\"https://www.youtube.com/watch?v=HAA8mgxlov8\" >\n        <img src=\"https://memkey.s3.us-west-1.amazonaws.com/media/images/youtube_32.png\"/>\n    </a>\n</div><div>\n    Solutions:\n    <a href=\"https://leetcode.com/problems/regular-expression-matching/solutions/2976919/solution-by-deleted_user-ttfe/\" class=\"memkey-link\">[1]</a>\n</div><div class='memkey-hide' data-title='Constraints'>\n\n\n1 <= s.length <= 20\n\n\n\n1 <= p.length <= 20\n\n\n\ns\ncontains only lowercase English letters.\n\n\np\ncontains only lowercase English letters,\n'.'\n, and\n'*'\n.\n\nIt is guaranteed for each appearance of the character\n'*'\n, there will be a previous valid character to match.\n</div>",
+        "back": "1. Use recursive decision tree with DFS passing (i, j). Where i represents index of string and j represents index of pattern. <br/> Handle matching for '*', '.' or specific character",
+        "source": "https://www.youtube.com/watch?v=HAA8mgxlov8&t=236"
+    },
+    {
+        "topicLabels": [
+            "Description Summary",
+            "Description",
+            "Examples",
+            "Brute Force Solution"
+        ],
+        "back": "2. Look ahead by 1 to check for '*'. Handle '*' by branching. On one branch move i + 1 or move j + 2 skipping the star character.",
+        "source": "https://www.youtube.com/watch?v=HAA8mgxlov8&t=236"
+    },
+    {
+        "topicLabels": [
+            "Description Summary",
+            "Description",
+            "Examples",
+            "Brute Force Solution"
+        ],
+        "back": "3. Handle '.' and specific character by moving i + 1 and j + 1 if they match ('.' will always match). <br/> return false if they don't <br/> Return if i reaches end of string and j reaches end of pattern.",
+        "source": "https://www.youtube.com/watch?v=HAA8mgxlov8&t=236"
+    },
+    {
+        "topicLabels": [
+            "Description Summary",
+            "Description",
+            "Examples",
+            "Brute Force Solution",
+            "Time Complexity"
+        ],
+        "back": "O(2^n)",
+        "source": "https://www.youtube.com/watch?v=HAA8mgxlov8&t=236"
+    },
+    {
+        "topicLabels": [
+            "Description Summary",
+            "Description",
+            "Examples",
+            "Optimal Solution"
+        ],
+        "front": "",
+        "back": "Same DFS as brute force but add memoization using indexes (i,j). Where i represents string index and j represents pattern index.",
+        "source": "https://www.youtube.com/watch?v=HAA8mgxlov8&t=1161"
+    },
+    {
+        "topicLabels": [
+            "Description Summary",
+            "Description",
+            "Examples",
+            "Optimal Solution",
+            "Time Complexity"
+        ],
+        "back": "O(n × m)",
+        "source": "https://www.youtube.com/watch?v=HAA8mgxlov8&t=1242"
+    },
+    {
+        "topicLabels": [
+            "Description Summary",
+            "Description",
+            "Solution Trick"
+        ],
+        "front": "",
+        "back": "Top Down with memoization to optimize the decision tree approach. <br/> Bottom up has same time complexity.",
+        "source": "https://www.youtube.com/watch?v=HAA8mgxlov8&t=437"
+    }
+]

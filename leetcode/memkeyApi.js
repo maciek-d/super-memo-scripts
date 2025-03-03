@@ -1,4 +1,3 @@
-
 export async function uploadFlashcard({
     title, front, back, problemUrl
 }) {
@@ -54,7 +53,7 @@ export async function addTopicToCourse(label, value, courseId, authToken) {
         });
 
         if (!response.ok) {
-            throw new Error(`Failed to fetch list. Status code: ${response.status}`);
+            throw new Error(`Failed to add topic to course. Status code: ${response.status}`);
         }
 
         return true
@@ -80,7 +79,7 @@ export async function addTopicToList(label, value, listId, courseId, authToken) 
         });
 
         if (!response.ok) {
-            throw new Error(`Failed to fetch list. Status code: ${response.status}`);
+            throw new Error(`Failed to add topic to list. Status code: ${response.status}`);
         }
 
         return true
@@ -90,7 +89,7 @@ export async function addTopicToList(label, value, listId, courseId, authToken) 
     return false
 }
 
-export async function saveList(flashcards, listTitle, courseId, authToken) {
+export async function saveList(list, courseId, authToken) {
     if (!courseId || !authToken) {
         console.error('Course ID or authentication token is missing.');
         return;
@@ -101,11 +100,9 @@ export async function saveList(flashcards, listTitle, courseId, authToken) {
         const endpoint = `${backendUrl}/courses/${courseId}/lists`
         const method = 'POST'
 
-        const payload = {
-            listId: null,
-            title: listTitle,
-            flashcards,
-        };
+        const payload = list
+
+        console.log({ payload })
 
         const response = await fetch(endpoint, {
             method,
@@ -121,7 +118,7 @@ export async function saveList(flashcards, listTitle, courseId, authToken) {
         }
 
         const data = await response.json();
-        return data.listId
+        return data?.successful?.[0]?.listId
     } catch (error) {
         console.error('Error saving list:', error);
     }

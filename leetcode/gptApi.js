@@ -4,11 +4,11 @@ const GPT3Tokenizer = gptPkg.default
 
 import OpenAI from "openai"
 
-const openai = new OpenAI({
-    apiKey: process.env.OPENAI_API_KEY,
-});
 
 export async function promptChatGpt(prompt, userMessage) {
+    const openai = new OpenAI({
+        apiKey: process.env.OPENAI_API_KEY,
+    });
     const systemMessage = {
         role: "system",
         content: prompt
@@ -29,6 +29,9 @@ export async function promptChatGpt(prompt, userMessage) {
 }
 
 export async function createImage(prompt) {
+    const openai = new OpenAI({
+        apiKey: process.env.OPENAI_API_KEY,
+    });
     const response = await openai.images.generate({
         model: "dall-e-3",
         prompt,

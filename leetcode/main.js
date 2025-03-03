@@ -1,26 +1,26 @@
 import {
     appendObjectToFile, appendToProcessedUrls, isProcessed,
     gptRequest, readCachedUrls, writeCachedUrls, extractFirstNumber,
-    readByObjectKey,
     extractSolutionsFromIndexes,
     extractQuestionSections,
     objLog,
 } from './fileUtils.js';
+import { scrapeYoutubeVideoUrls } from "./youtubeScraper.js"
 import { scrapeProblem, scrapeSolutions } from './leetcodeScraper.js';
 import { createUserAnswerMessage, createUserQuestionMessage } from './gptApi.js';
 import { extractAnswer, questionTemplate, } from './prepareFlashcard.js';
 
 import { readFileSync } from "fs"
-import { fileURLToPath } from 'url';
 import { mkdir } from 'fs/promises';
+
+import { uploadFlashcard } from './memkeyApi.js';
 
 import StealthPlugin from 'puppeteer-extra-plugin-stealth'
 import puppeteer from 'puppeteer-extra';
 // Add stealth plugin and use it
 puppeteer.use(StealthPlugin());
 
-import { uploadFlashcard } from './memkeyApi.js';
-
+import { fileURLToPath } from 'url';
 import { join, dirname } from 'path';
 import { config } from 'dotenv';
 const __dirname = dirname(fileURLToPath(import.meta.url))
@@ -149,51 +149,6 @@ async function answerPrompt({ title, solutions, language }) {
     const answerMessage = createUserAnswerMessage({ systemPrompt, solutions })
     const answerResponse = await gptRequest({ title, systemPrompt, userMessage: answerMessage, dataPath: `${DATA_PATH}/gptAnswerResponses.js` })
     return answerResponse
-}
-
-async function scrapeYoutubeVideoUrl(browser, queryString) {
-    const page = await browser.newPage();
-    const searchUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(queryString)}&sp=EgIQAQ%253D%253D`;
-
-    try {
-        await page.goto(searchUrl, { waitUntil: 'networkidle2' });
-
-        const videoUrl = await page.evaluate(() => {
-            const videoElements = Array.from(document.querySelectorAll('a#video-title'));
-            for (const video of videoElements) {
-                return video.href
-            }
-            return null;
-        });
-        await page.close();
-        return videoUrl;
-    } catch (error) {
-        await page.close();
-        console.error(`Error fetching YouTube video URL for query: ${queryString}`, error);
-        return null;
-    }
-}
-
-export async function scrapeYoutubeVideoUrls(browser, scrapedPath, title, language) {
-
-    const youtubeUrlsPath = `${scrapedPath}/youtubeUrls.js`
-    const urls = readByObjectKey(youtubeUrlsPath, title)
-    // TODO LOG AND PAUSE HERE
-    // if (urls) return urls
-
-    // TODO remove 150
-    const youtubeUrl = await scrapeYoutubeVideoUrl(browser, `Leetcode ${title} ${extractFirstNumber(title)} @neetcode NeetCode 150`)
-    const youtubeUrlLang = await scrapeYoutubeVideoUrl(browser, `Leetcode ${extractFirstNumber(title)} ${title} ${language}`)
-    objLog({ youtubeUrl, youtubeUrlLang })
-
-    if (!youtubeUrl || !youtubeUrlLang) {
-        throw new Error(
-            `Failed to scrapeYoutubeVideoUrl ${JSON.stringify
-                ({ youtubeUrl, youtubeUrlLang }, null, 2)}`
-        )
-    }
-    appendObjectToFile(title, { youtubeUrl, youtubeUrlLang }, youtubeUrlsPath)
-    return { youtubeUrl, youtubeUrlLang }
 }
 
 main().then(() => {

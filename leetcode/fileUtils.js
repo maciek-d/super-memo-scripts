@@ -1,4 +1,5 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs"
+import { spawn } from "child_process";
 import { promptChatGpt } from "./gptApi.js"
 
 export function readCachedUrls(dataPath, tag) {
@@ -210,28 +211,6 @@ export function parseSections(text, headingsToExtract, language) {
     return results;
 }
 
-export function extractYoutubeResponseSections(response, language) {
-    const headings = [
-        "Description Summary",
-        "Description",
-        "Brute Force Solution",
-        "Optimal Solution",
-        "Solution Trick",
-        "Common Mistakes"
-    ]
-    const [
-        summary,
-        description,
-        bruteForce,
-        optimal,
-        trick,
-        commonMistakes
-    ] = parseSections(response, headings, language);
-    return {
-        summary, description, bruteForce,
-        optimal, trick, commonMistakes
-    }
-}
 
 export function extractQuestionSections(response, language) {
     response = response
@@ -364,4 +343,35 @@ export function ensureDirectoryExists(dirPath) {
         mkdirSync(dirPath, { recursive: true });
         console.log(`Created directory: ${dirPath}`);
     }
+}
+
+export function writeArrayToFile(array, filePath) {
+    const formattedData = `export default ${JSON.stringify(array, null, 2)}\n`;
+    writeFileSync(filePath, formattedData, "utf8");
+}
+
+export function readArrayFromFile(filePath) {
+    if (!existsSync(filePath)) return null;
+
+    const fileContent = readFileSync(filePath, "utf8");
+    const jsonString = fileContent.replace(/^export default /, '').trim();
+
+    return JSON.parse(jsonString);
+}
+
+export async function openVimAndWait(filePath) {
+    // Pause stdin to prevent Node from processing input
+    process.stdin.pause();
+
+    return new Promise((resolve) => {
+        const vim = spawn("vim", [filePath], {
+            stdio: "inherit"
+        });
+
+        vim.on("exit", (code) => {
+            // Resume stdin after Vim exits
+            process.stdin.resume();
+            resolve(code);
+        });
+    });
 }
