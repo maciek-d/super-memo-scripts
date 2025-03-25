@@ -86,24 +86,26 @@ async function main() {
 
     const language = LANGUAGE
 
+    let waitForPreviousFlashcard = async () => { }
+
+    let count = currentProblemIndex
     for (const problemUrl of problemUrlsSlice) {
+
         if (isProcessed(PROCESSED_PATH, problemUrl)) continue // Necessary: dup urls might exist in other tags
 
         const { title, descriptionSections } = await scrapeProblem(SCRAPED_PATH, browser, problemUrl)
-        console.log({ title })
+        console.log({ title }, { currentProblem: ++count })
         const solutionsByUrl = await scrapeSolutions(SCRAPED_PATH, browser, language, `${problemUrl}/solutions/`)
         const solutionUrl = Object.keys(solutionsByUrl)?.[0] ?? ""
 
         const { youtubeUrl } = await scrapeYoutubeVideoUrls(browser, SCRAPED_PATH, title, language)
         console.log({ youtubeUrl })
-        const youtubeCaptions = await fetchYouTubeCaptions(youtubeUrl);
+        const youtubeCaptions = await fetchYouTubeCaptions(youtubeUrl)
 
         const systemPrompt = readFileSync(`data/youtubePrompt.txt`, 'utf-8')
         const gptResponse = await gptRequest({
             title, systemPrompt, userMessage: youtubeCaptions, dataPath: `${DATA_PATH}/gptYoutubeResponse.js`
         })
-
-        console.log({ gptResponse })
 
         const {
             summary, description, bruteForceDetails,
@@ -112,7 +114,7 @@ async function main() {
 
         const { statementImages, ioExamples, constraints } = extractSectionsFromDescription(descriptionSections)
 
-        const front = constructProblemFront({ solutionUrl, statementImages, youtubeUrl, constraints })
+        const front = constructProblemFront({ solutionUrl, statementImages, problemUrl, constraints })
         const listImage = statementImages[0] ?? ""
         const listFlashcards = await createListFlashcards({
             front, youtubeUrl,
@@ -120,43 +122,15 @@ async function main() {
             commonMistakesDetails,
         })
 
-        objLog({
-            title,
-            listImageUrl: listImage,
-            listThumbUrl: listImage,
-        })
-
+        await waitForPreviousFlashcard() // make sure we upload previous flashcard before proceeding
         console.log("Override currentListFlashcards.js")
         await waitForEnterKey()
+
         const currentFlashcardsPath = `data/memkey/currentListFlashcards.js`
         const modelListFlashcardsPath = `data/memkey/4oFlashcards.js`
-        const fixedListFlashcardsPath = `data/memkey/fixedFlashcards.js`
         appendObjectToFile(title, listFlashcards, modelListFlashcardsPath)
         writeArrayToFile(listFlashcards, currentFlashcardsPath)
-        console.log("Press enter after fixing the flashcard data")
-        await waitForEnterKey()
 
-        const newListFlashcards = readArrayFromFile(currentFlashcardsPath)
-        appendObjectToFile(title, newListFlashcards, fixedListFlashcardsPath)
-        const list = {
-            title,
-            listImageUrl: listImage,
-            listThumbUrl: listImage,
-            flashcards: newListFlashcards
-        }
-
-        console.dir({ list },
-            { depth: 4 })
-        await waitForEnterKey()
-        const listId = await saveList(list, COURSE_ID, MEMKEY_TOKEN)
-        objLog({ listId })
-
-        await addTopicToList("Examples", ioExamples, listId, COURSE_ID, MEMKEY_TOKEN)
-        await addTopicToList("Description Summary", summary, listId, COURSE_ID, MEMKEY_TOKEN)
-        await addTopicToList("Description", description, listId, COURSE_ID, MEMKEY_TOKEN)
-        console.log("Enter to Save flashcard to processedUrls")
-        await waitForEnterKey()
-        appendToProcessedUrls(PROCESSED_PATH, problemUrl)
         // Temporary solution to stop pages from buildig up
         const pages = await browser.pages()
         for (const page of pages) {
@@ -164,6 +138,16 @@ async function main() {
                 await page.close();
             }
         }
+
+        waitForPreviousFlashcard = async () => {
+            await fixAndUploadFlashcard({
+                currentFlashcardsPath,
+                title,
+                listImage,
+                ioExamples, summary, description,
+                problemUrl, gptResponse
+            });
+        };
     }
     browser.close()
 }
@@ -571,6 +555,7 @@ async function createListFlashcards(flashcardData) {
 
         const { steps, timeComplexity, timestamp } = detailsForTopic[topic]
         const stepFlashcards = loopOverSteps({ labels, firstFlashcardFront, timeComplexity, timestamp, steps, youtubeUrl })
+
         if (stepFlashcards.length !== 0)
             firstFlashcardFront = ""
         listFlashcards.push(...stepFlashcards)
@@ -598,7 +583,7 @@ function loopOverSteps(data) {
         }
     })
 
-    if (timeComplexity) {
+    if (flashcards.length > 0 && timeComplexity) {
         flashcards.push({
             topicLabels: [...labels, "Time Complexity"],
             back: timeComplexity,
@@ -611,25 +596,19 @@ function loopOverSteps(data) {
 
 function constructProblemFront(data) {
 
-    const { statementImages, youtubeUrl, solutionUrl, constraints } = data
+    const { statementImages, solutionUrl, problemUrl, constraints } = data
 
     const imageTags = statementImages.length > 1
         ? statementImages.slice(1).map(src => `<img src="${src}" class="memkey-leetcode-image"/>`).join("")
         : ""
 
-    const youtubeTag = `<div class="memkey-align-left">
-    <a href="${youtubeUrl}" >
-        <img src="https://memkey.s3.us-west-1.amazonaws.com/media/images/youtube_32.png"/>
-    </a>
-</div>`
-
-    const solutionUrlTag = !solutionUrl ? "" :
+    const solutionUrlTag = !solutionUrl && !problemUrl ? "" :
         `<div>
-    Solutions:
-    <a href="${solutionUrl}" class="memkey-link">[1]</a>
+    <a href="${problemUrl}" class="memkey-link">Leetcode Problem</a> <br/>
+    <a href="${solutionUrl}" class="memkey-link">Leetcode Solution</a>
 </div>`
 
-    const front = `${imageTags}${youtubeTag}${solutionUrlTag}${constraints}`
+    const front = `${imageTags}${solutionUrlTag}${constraints}`
 
     return front
 }
@@ -647,4 +626,42 @@ function waitForEnterKey() {
             resolve();
         });
     });
+}
+
+async function fixAndUploadFlashcard({
+    currentFlashcardsPath,
+    title,
+    listImage,
+    ioExamples, summary, description,
+    problemUrl, gptResponse
+}) {
+    console.log({ gptResponse })
+    console.log({ title })
+    objLog({
+        listImageUrl: listImage,
+        listThumbUrl: listImage,
+    })
+    console.log("Press enter after fixing the flashcard data")
+    await waitForEnterKey()
+
+    const fixedListFlashcardsPath = `data/memkey/fixedFlashcards.js`
+    const newListFlashcards = readArrayFromFile(currentFlashcardsPath)
+    appendObjectToFile(title, newListFlashcards, fixedListFlashcardsPath)
+    const list = {
+        title,
+        listImageUrl: listImage,
+        listThumbUrl: listImage,
+        flashcards: newListFlashcards
+    }
+
+    console.dir({ list },
+        { depth: 4 })
+    await waitForEnterKey()
+    const listId = await saveList(list, COURSE_ID, MEMKEY_TOKEN)
+    objLog({ listId })
+
+    await addTopicToList("Examples", ioExamples, listId, COURSE_ID, MEMKEY_TOKEN)
+    await addTopicToList("Description Summary", summary, listId, COURSE_ID, MEMKEY_TOKEN)
+    await addTopicToList("Description", description, listId, COURSE_ID, MEMKEY_TOKEN)
+    appendToProcessedUrls(PROCESSED_PATH, problemUrl)
 }

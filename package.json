@@ -1,6 +1,8 @@
 {
   "type": "module",
   "dependencies": {
+    "@aws-sdk/client-dynamodb": "^3.774.0",
+    "@aws-sdk/util-dynamodb": "^3.774.0",
     "axios": "^1.5.1",
     "clipboardy": "^4.0.0",
     "dotenv": "^16.3.1",
