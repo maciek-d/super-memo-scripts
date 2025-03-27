@@ -8,6 +8,20 @@ import {
 } from '@aws-sdk/client-dynamodb'
 import { unmarshall } from '@aws-sdk/util-dynamodb'
 import readline from 'readline'
+// Figure out what flashcard is broken and place above to run
+// Check if this script will double anythign before running
+// GO TO TODO to continue
+
+function removePreviousBackOnce(text, backContent) {
+    if (!backContent?.trim()) return text
+
+    const trimmedBack = backContent.trim()
+    const lastIndex = text.lastIndexOf(trimmedBack)
+
+    if (lastIndex === -1) return text
+
+    return text.slice(0, lastIndex) + text.slice(lastIndex + trimmedBack.length)
+}
 
 function waitForEnter(promptText = 'Press Enter to continue...') {
     return new Promise(resolve => {
@@ -15,7 +29,6 @@ function waitForEnter(promptText = 'Press Enter to continue...') {
             input: process.stdin,
             output: process.stdout
         })
-
         rl.question(promptText, () => {
             rl.close()
             resolve()
@@ -67,13 +80,14 @@ async function fetchFlashcardsForList(courseId, listId) {
     return res.Items.map(unmarshall).sort((a, b) => (a.listIndex ?? 0) - (b.listIndex ?? 0))
 }
 
-function getLabelText(labels, topicsMap, fallbackOptions) {
-    if (topicsMap) {
-        return labels.map(l => topicsMap[l] ?? '').join('\n').trim()
-    }
+function getLabelText(labels, listTopicsOptions) {
+    const map = Object.fromEntries((listTopicsOptions ?? []).map(opt => [opt.label.trim(), opt.value]))
 
-    const map = Object.fromEntries(fallbackOptions.map(opt => [opt.label, opt.value]))
-    return labels.map(l => map[l] ?? '').join('\n').trim()
+    return labels.map(label => {
+        let text = map[label.trim()] ?? label.trim()
+        if (text.endsWith('"')) text = text.slice(0, -1)
+        return text.trim()
+    }).join('\n').trim()
 }
 
 async function updateFlashcard(fc, front, showPreviousBack) {
@@ -93,42 +107,79 @@ async function updateFlashcard(fc, front, showPreviousBack) {
 }
 
 async function main() {
-    const course = await fetchCourse(courseId, courseId.split('-')[0])
-    const fallbackTopics = course?.topicsOptions ?? []
     const lists = await fetchListsForCourse(courseId)
 
     for (const list of lists) {
         const listTitle = list.title
         const listId = list.listId
+
         const fixedEntries = fixedFlashcards[listTitle]
         if (!fixedEntries) continue
 
         const flashcards = await fetchFlashcardsForList(courseId, listId)
+
         let lastLabels = []
-
+        let lastBack = null
         for (let i = 0; i < flashcards.length; i++) {
-            const fc = flashcards[i]
-            const fixed = fixedEntries[i]
-            const labels = fixed?.topicLabels ?? []
 
+            const fc = flashcards[i]
+            if (fc.flashcardId !== "") { // TODO ADD BROKEN HERE
+                //console.log("Skippng")
+                lastBack = fc.back
+                continue
+            }
+
+
+            const fixed = fixedEntries[i]
+
+            const labels = fixed?.topicLabels ?? []
             if (!labels.length) continue
 
-            const topicsText = getLabelText(labels, list.topicsMap, fallbackTopics)
+            const topicsText = getLabelText(labels, list.topicsOptions)
 
-            const isTransition = lastLabels.length &&
-                labels[labels.length - 1] !== lastLabels[lastLabels.length - 1]
+            let cleanedFront = fc.front.replace(
+                /<div class="memkey-align-left">[\s\S]*?<\/div>\s*/g,
+                ''
+            ).replace(
+                /<div>\s*Solutions:\s*<a\s+href="([^"]+)"[^>]*>\[1\]<\/a>/g,
+                `<div><a href="$1" class="memkey-link">Leetcode Solutions</a>`
+            )
 
-            const newFront = isTransition
-                ? topicsText
-                : `${topicsText}\n${fc.front}`
+            let youtubeBaseUrl = null
+            if (fc.source?.includes('youtube.com')) {
+                try {
+                    const url = new URL(fc.source)
+                    const videoId = url.searchParams.get('v')
+                    if (videoId) {
+                        youtubeBaseUrl = `https://www.youtube.com/watch?v=${videoId}`
+                    }
+                } catch (err) {
+                    console.warn('Invalid YouTube URL:', fc.source)
+                }
+            }
+
+            if (youtubeBaseUrl &&
+                cleanedFront.match(/<a href="[^"]+"[^>]*>Leetcode Solutions<\/a>/)
+            ) {
+                cleanedFront = cleanedFront.replace(
+                    /(<a href="[^"]+"[^>]*>Leetcode Solutions<\/a>)/,
+                    `$1 &nbsp;|&nbsp; <a href="${youtubeBaseUrl}" class="memkey-link">YouTube Solution</a>`
+                )
+            }
+
+            const newFront = `${topicsText}\n${removePreviousBackOnce(cleanedFront, lastBack)}`
+
+            const isTransition =
+                lastLabels.length !== labels.length ||
+                labels.some((label, idx) => label !== lastLabels[idx])
 
             const showPreviousBack = !isTransition
 
-            console.log({ labels, front, newFront, })
-            // await updateFlashcard(fc, newFront, showPreviousBack)
-            console.log(`✅ Would update ${fc.flashcardId} | transition=${isTransition} | showPreviousBack=${showPreviousBack}`)
-            await waitForEnter()
+            //console.log({ labels, front: fc.front, newFront, back: fc.back })
+            await updateFlashcard(fc, newFront, showPreviousBack)
+            console.log(`✅ updated ${fc.flashcardId} | showPreviousBack=${showPreviousBack}`)
 
+            lastBack = fc.back
             lastLabels = labels
         }
     }
