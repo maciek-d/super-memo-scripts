@@ -1,3 +1,13 @@
+// SAVE TO FAKE COURSE AND CHECK IF EVERYTHING LOOKS RIGTH AFTER FIRST FLASHCARD
+// Checklist!!:
+// Add Leetcode Solution | Youtube Solution
+// Remove youtube Icon
+// No " at the end of examples constraints or any of the steps
+// showPreviousBack is set correctly
+// Topic values displayed correctly: Look at topics in script and compare for each
+
+//TODO Do not add flashcard to processed before you make sure it works
+
 import readline from 'readline'
 import { getSubtitles } from 'youtube-captions-scraper'
 import { existsSync, readFileSync, writeFileSync } from "fs"
@@ -12,7 +22,7 @@ import {
     writeArrayToFile,
 } from './fileUtils.js'
 import { modifyImagesInPlace } from "./prepareFlashcard.js"
-import { addTopicToList, saveList, addTopicToCourse, } from './memkeyApi.js'
+import { addTopicToList, saveList } from './memkeyApi.js'
 
 import StealthPlugin from 'puppeteer-extra-plugin-stealth'
 import puppeteer from 'puppeteer-extra';
@@ -41,7 +51,8 @@ const LANGUAGE_OPTIONS = ["JavaScript", "C++", "Java", "Python3", "Python", "C",
     "Go", "Scala", "Kotlin", "Rust", "MySQL", "Bash", "TypeScript", "Dart",
     "Erlang", "Elixir", "PHP", "Racket"]
 
-const COURSE_ID = "114316818461884883239-1740023062738"
+//const COURSE_ID = "114316818461884883239-1740023062738"
+const COURSE_ID = "114316818461884883239-FAKE"
 const MEMKEY_TOKEN = process.env.MEMKEY_TOKEN
 
 async function main() {
@@ -63,24 +74,6 @@ async function main() {
 
     const problemUrlsSlice = problemUrls.slice(currentProblemIndex, lastBatchIndex)
     objLog({ currentProblemIndex, lastBatchIndex })
-
-    if (currentProblemIndex === 0) {
-        const topics = [
-            "Brute Force Solution",
-            "Intermediate Solution 1",
-            "Intermediate Solution 2",
-            "Intermediate Solution 3",
-            "Intermediate Solution 4",
-            "Intermediate Solution 5",
-            "Optimal Solution",
-            "Solution Trick",
-            "Common Mistakes",
-            "Time Complexity",
-        ]
-        for (const label of topics) {
-            await addTopicToCourse(label, label, COURSE_ID, MEMKEY_TOKEN)
-        }
-    }
 
     const browser = await puppeteer.launch({ headless: "new" })
 
@@ -155,13 +148,14 @@ async function main() {
 main();
 
 function extractSectionsFromDescription({ statement, ioExamples, constraints }) {
-    ioExamples = modifyImagesInPlace(ioExamples)
+    ioExamples = modifyImagesInPlace(ioExamples).trim().replace(/"$/, '').trim()
+
     const statementImages = extractImages(statement)
     const exampleImages = extractImages(ioExamples)
     if (statementImages.length === 0 && exampleImages.length > 0)
         statementImages.push(exampleImages[0])
     ioExamples = addHideTag(ioExamples, "Examples")
-    constraints = addHideTag(constraints, "Constraints")
+    constraints = addHideTag(constraints.trim().replace(/"$/, '').trim(), "Constraints")
     return { statementImages, ioExamples, constraints, }
 }
 
@@ -558,7 +552,10 @@ async function createListFlashcards(flashcardData) {
 
         if (stepFlashcards.length !== 0)
             firstFlashcardFront = ""
-        listFlashcards.push(...stepFlashcards)
+
+        // Remove " at the end of each step
+        const newStepFlashcards = stepFlashcards.map(step => step.trim().replace(/"$/, '').trim())
+        listFlashcards.push(...newStepFlashcards)
     }
 
     return listFlashcards
@@ -576,18 +573,19 @@ function loopOverSteps(data) {
     const flashcards = steps.map((step, index) => {
         const back = step.replaceAll("\n", "<br/>")
         return {
-            topicLabels: labels,
-            front: index === 0 ? firstFlashcardFront : "",
+            front: index === 0 ? firstFlashcardFront : labels.join("\n"),
             back,
-            source: timestamp ? `${youtubeUrl}&t=${timestamp}` : youtubeUrl
+            source: timestamp ? `${youtubeUrl}&t=${timestamp}` : youtubeUrl,
+            showPreviousBack: index !== 0
         }
     })
 
     if (flashcards.length > 0 && timeComplexity) {
         flashcards.push({
-            topicLabels: [...labels, "Time Complexity"],
+            front: labels.join("\n") + "\nTime Complexity",
             back: timeComplexity,
-            source: timestamp ? `${youtubeUrl}&t=${timestamp}` : youtubeUrl
+            source: timestamp ? `${youtubeUrl}&t=${timestamp}` : youtubeUrl,
+            showPreviousBack: false,
         })
     }
     return flashcards

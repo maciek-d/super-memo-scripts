@@ -62,17 +62,9 @@ export function questionTemplate({
 <div class="memkey-hide"><br/>${constraints}<br/></div>
 <span>
   <span>
-    <a href="${youtubeUrl}" >
-    <img src="https://memkey.s3.us-west-1.amazonaws.com/media/images/youtube_32.png"/>
-    </a>
-    ${language}: <a href="${youtubeUrlLang}" >
-    <img src="https://memkey.s3.us-west-1.amazonaws.com/media/images/youtube_32.png"/>
-    </a>
-  </span>
-  <span>
-    Solutions:
-    <a href="${solutionsUrl1}" class="memkey-link">[1]</a><br/>
-    <a href="${solutionsUrl2}" class="memkey-link">[2]</a>
+    <a href="${solutionsUrl1}" class="memkey-link">Leetcode Solution</a>
+    &nbsp;|&nbsp;
+    <a href="${youtubeUrl}" class="memkey-link">YouTube Solution</a>
   </span>
 </span>`;
     return question

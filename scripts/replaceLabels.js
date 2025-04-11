@@ -12,6 +12,7 @@ import readline from 'readline'
 // Check if this script will double anythign before running
 // GO TO TODO to continue
 
+
 function removePreviousBackOnce(text, backContent) {
     if (!backContent?.trim()) return text
 
@@ -68,7 +69,7 @@ async function fetchListsForCourse(courseId) {
 
 async function fetchFlashcardsForList(courseId, listId) {
     const cmd = new QueryCommand({
-        TableName: 'Flashcards',
+        TableName: 'FlashcardsBackup',
         KeyConditionExpression: 'courseId = :cid',
         FilterExpression: 'listId = :lid',
         ExpressionAttributeValues: {
@@ -114,20 +115,21 @@ async function main() {
         const listId = list.listId
 
         const fixedEntries = fixedFlashcards[listTitle]
-        if (!fixedEntries) continue
+        if (!fixedEntries) {
+            console.warn("No fixedFlashcards for", list.title)
+            continue
+        }
 
         const flashcards = await fetchFlashcardsForList(courseId, listId)
 
         let lastLabels = []
         let lastBack = null
+        console.log(list.title)
         for (let i = 0; i < flashcards.length; i++) {
 
+
             const fc = flashcards[i]
-            if (fc.flashcardId !== "") { // TODO ADD BROKEN HERE
-                //console.log("Skippng")
-                lastBack = fc.back
-                continue
-            }
+            //if (fc.flashcardId !== "1740195708856#M") { TODO add broken here
 
 
             const fixed = fixedEntries[i]
@@ -175,8 +177,8 @@ async function main() {
 
             const showPreviousBack = !isTransition
 
-            //console.log({ labels, front: fc.front, newFront, back: fc.back })
-            await updateFlashcard(fc, newFront, showPreviousBack)
+            console.log({ labels, front: fc.front, newFront, back: fc.back })
+            //await updateFlashcard(fc, newFront, showPreviousBack)
             console.log(`✅ updated ${fc.flashcardId} | showPreviousBack=${showPreviousBack}`)
 
             lastBack = fc.back
