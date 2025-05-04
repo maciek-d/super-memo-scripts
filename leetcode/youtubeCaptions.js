@@ -22,7 +22,7 @@ import {
     writeArrayToFile,
 } from './fileUtils.js'
 import { modifyImagesInPlace } from "./prepareFlashcard.js"
-import { addTopicToList, saveList } from './memkeyApi.js'
+import { saveList } from './memkeyApi.js'
 
 import StealthPlugin from 'puppeteer-extra-plugin-stealth'
 import puppeteer from 'puppeteer-extra';
@@ -52,7 +52,7 @@ const LANGUAGE_OPTIONS = ["JavaScript", "C++", "Java", "Python3", "Python", "C",
     "Erlang", "Elixir", "PHP", "Racket"]
 
 //const COURSE_ID = "114316818461884883239-1740023062738"
-const COURSE_ID = "114316818461884883239-FAKE"
+const COURSE_ID = "114316818461884883239-1746330458376"
 const MEMKEY_TOKEN = process.env.MEMKEY_TOKEN
 
 async function main() {
@@ -78,8 +78,6 @@ async function main() {
     const browser = await puppeteer.launch({ headless: "new" })
 
     const language = LANGUAGE
-
-    let waitForPreviousFlashcard = async () => { }
 
     let count = currentProblemIndex
     for (const problemUrl of problemUrlsSlice) {
@@ -115,7 +113,6 @@ async function main() {
             commonMistakesDetails,
         })
 
-        await waitForPreviousFlashcard() // make sure we upload previous flashcard before proceeding
         console.log("Override currentListFlashcards.js")
         await waitForEnterKey()
 
@@ -132,17 +129,15 @@ async function main() {
             }
         }
 
-        waitForPreviousFlashcard = async () => {
-            await fixAndUploadFlashcard({
-                currentFlashcardsPath,
-                title,
-                listImage,
-                ioExamples, summary, description,
-                problemUrl, gptResponse
-            });
-        };
+        await fixAndUploadFlashcard({
+            currentFlashcardsPath,
+            title,
+            listImage,
+            ioExamples, summary, description,
+            problemUrl, gptResponse
+        });
     }
-    browser.close()
+    await browser.close()
 }
 
 main();
@@ -276,7 +271,6 @@ function extractVideoId(url) {
 
 export function parseSections(text, headingsToExtract) {
     let results = [];
-    const lowerText = text.toLowerCase();
     let searchStart = 0;
 
     function findHeadingIndex(source, startIndex, patterns) {
@@ -630,7 +624,6 @@ async function fixAndUploadFlashcard({
     currentFlashcardsPath,
     title,
     listImage,
-    ioExamples, summary, description,
     problemUrl, gptResponse
 }) {
     console.log({ gptResponse })
@@ -658,8 +651,5 @@ async function fixAndUploadFlashcard({
     const listId = await saveList(list, COURSE_ID, MEMKEY_TOKEN)
     objLog({ listId })
 
-    await addTopicToList("Examples", ioExamples, listId, COURSE_ID, MEMKEY_TOKEN)
-    await addTopicToList("Description Summary", summary, listId, COURSE_ID, MEMKEY_TOKEN)
-    await addTopicToList("Description", description, listId, COURSE_ID, MEMKEY_TOKEN)
     appendToProcessedUrls(PROCESSED_PATH, problemUrl)
 }

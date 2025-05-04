@@ -1,9 +1,5 @@
 import { extractAnswerSections } from "./fileUtils.js";
 
-function replaceNewLinesWithBrTags(sections) {
-
-}
-
 export function extractAnswer({
     solutionUrls,
     gptResponse,
