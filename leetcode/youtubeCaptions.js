@@ -651,5 +651,5 @@ async function fixAndUploadFlashcard({
     const listId = await saveList(list, COURSE_ID, MEMKEY_TOKEN)
     objLog({ listId })
 
-    appendToProcessedUrls(PROCESSED_PATH, problemUrl)
+    //appendToProcessedUrls(PROCESSED_PATH, problemUrl)
 }
