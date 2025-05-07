@@ -63,32 +63,6 @@ export async function addTopicToCourse(label, value, courseId, authToken) {
     return false
 }
 
-export async function addTopicToList(label, value, listId, courseId, authToken) {
-    const topic = { label, value }
-    const backendUrl = process.env.MEMKEY_BACKEND_URL
-    const endpoint = `${backendUrl}/courses/${courseId}/lists/${listId}/topic`
-
-    try {
-        const response = await fetch(endpoint, {
-            method: 'PATCH',
-            headers: {
-                'Content-Type': 'application/json',
-                Authorization: `Bearer ${authToken}`,
-            },
-            body: JSON.stringify(topic),
-        });
-
-        if (!response.ok) {
-            throw new Error(`Failed to add topic to list. Status code: ${response.status}`);
-        }
-
-        return true
-    } catch (error) {
-        console.error('Error fetching list:', error);
-    }
-    return false
-}
-
 export async function saveList(list, courseId, authToken) {
     if (!courseId || !authToken) {
         console.error('Course ID or authentication token is missing.');
