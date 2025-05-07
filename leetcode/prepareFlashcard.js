@@ -57,11 +57,9 @@ export function questionTemplate({
 <div class="memkey-hide"><br/>${ioExamples}<br/></div>
 <div class="memkey-hide"><br/>${constraints}<br/></div>
 <span>
-  <span>
     <a href="${solutionsUrl1}" class="memkey-link">Leetcode Solution</a>
     &nbsp;|&nbsp;
     <a href="${youtubeUrl}" class="memkey-link">YouTube Solution</a>
-  </span>
 </span>`;
     return question
 }
