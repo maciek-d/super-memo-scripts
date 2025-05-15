@@ -1,12 +1,13 @@
 // SAVE TO FAKE COURSE AND CHECK IF EVERYTHING LOOKS RIGTH AFTER FIRST FLASHCARD
 // Checklist!!:
-// Add Leetcode Solution | Youtube Solution
-// Remove youtube Icon
+// Same line Leetcode Solution | Youtube Solution
 // No " at the end of examples constraints or any of the steps
-// showPreviousBack is set correctly
 // Topic values displayed correctly: Look at topics in script and compare for each
 
 //TODO Do not add flashcard to processed before you make sure it works
+
+// TODO not working.
+// Merge Examples and Description for Solution Trick
 
 import readline from 'readline'
 import { getSubtitles } from 'youtube-captions-scraper'
@@ -52,7 +53,7 @@ const LANGUAGE_OPTIONS = ["JavaScript", "C++", "Java", "Python3", "Python", "C",
     "Erlang", "Elixir", "PHP", "Racket"]
 
 //const COURSE_ID = "114316818461884883239-1740023062738"
-const COURSE_ID = "114316818461884883239-1746330458376"
+const COURSE_ID = "114316818461884883239-1746662610467"
 const MEMKEY_TOKEN = process.env.MEMKEY_TOKEN
 
 async function main() {
@@ -103,18 +104,20 @@ async function main() {
             optimalDetails, trickDetails, commonMistakesDetails,
         } = extractYoutubeResponseDetails(gptResponse)
 
-        const { statementImages, ioExamples, constraints } = extractSectionsFromDescription(descriptionSections)
 
-        const front = constructProblemFront({ solutionUrl, statementImages, problemUrl, constraints })
+        const { statementImages, ioExamples, constraints } = extractSectionsFromDescription(descriptionSections)
+        const front = constructProblemFront({ summary, description, ioExamples, statementImages, solutionUrl, youtubeUrl, constraints })
         const listImage = statementImages[0] ?? ""
+
         const listFlashcards = await createListFlashcards({
             front, youtubeUrl,
             bruteForceDetails, optimalDetails, trickDetails,
             commonMistakesDetails,
+            summary, description,
+            ioExamples,
         })
 
-        console.log("Override currentListFlashcards.js")
-        await waitForEnterKey()
+        await waitForEnterKey("Override currentListFlashcards.js")
 
         const currentFlashcardsPath = `data/memkey/currentListFlashcards.js`
         const modelListFlashcardsPath = `data/memkey/4oFlashcards.js`
@@ -239,7 +242,7 @@ async function fetchYouTubeCaptions(videoUrl, lang = 'en') {
 
         // Save captions to file
         writeFileSync(filePath, formattedCaptions);
-        console.log(`Captions saved to ${filePath}`);
+        console.log(`Captions saved to ${filePath} captions length: ${formattedCaptions.length}`);
 
         return formattedCaptions;
     } catch (error) {
@@ -491,6 +494,7 @@ export function extractYoutubeResponseDetails(response) {
     function prepareSection(section) {
         return extractSection(section)
             .replaceAll("\n", "<br/>")
+            .trim().replace(/"$/, '').trim()
     }
 
     const description = addHideTag(prepareSection(descriptionDetails), "Description")
@@ -510,10 +514,15 @@ async function createListFlashcards(flashcardData) {
     const {
         front,
         bruteForceDetails,
-        optimalDetails, trickDetails,
+        optimalDetails,
+        trickDetails,
         commonMistakesDetails,
         youtubeUrl,
+        ioExamples,
+        summary,
+        description
     } = flashcardData
+
     // TODO figure out how to deal with timestamps
     const topics = [
         "Brute Force Solution",
@@ -523,10 +532,10 @@ async function createListFlashcards(flashcardData) {
     ]
 
     const labelsForTopic = {
-        "Brute Force Solution": ["Description Summary", "Description", "Examples", "Brute Force Solution"],
-        "Optimal Solution": ["Description Summary", "Description", "Examples", "Optimal Solution"],
-        "Solution Trick": ["Description Summary", "Description", "Solution Trick"],
-        "Common Mistakes": ["Description Summary", "Description", "Common Mistakes"],
+        "Brute Force Solution": [summary, description, ioExamples, "Brute Force Solution"],
+        "Optimal Solution": [summary, description, ioExamples, "Optimal Solution"],
+        "Solution Trick": [summary, description, ioExamples, "Solution Trick"],
+        "Common Mistakes": [summary, description, "Common Mistakes"],
     }
 
     const detailsForTopic = {
@@ -542,33 +551,37 @@ async function createListFlashcards(flashcardData) {
         const labels = labelsForTopic[topic]
 
         const { steps, timeComplexity, timestamp } = detailsForTopic[topic]
-        const stepFlashcards = loopOverSteps({ labels, firstFlashcardFront, timeComplexity, timestamp, steps, youtubeUrl })
+        const stepFlashcards = loopOverSteps({ labels, firstFlashcardFront, timeComplexity, timestamp, steps, youtubeUrl, topic })
 
         if (stepFlashcards.length !== 0)
             firstFlashcardFront = ""
 
+        //console.log({ stepFlashcards })
         // Remove " at the end of each step
-        const newStepFlashcards = stepFlashcards.map(step => step.trim().replace(/"$/, '').trim())
+        const newStepFlashcards = stepFlashcards.map(step =>
+        ({
+            ...step,
+            front: step.front.trim().replace(/"$/, '').trim(),
+            back: step.back.trim().replace(/"$/, '').trim()
+        })
+        )
         listFlashcards.push(...newStepFlashcards)
     }
 
     return listFlashcards
 }
 
-// listImage
 function loopOverSteps(data) {
     const {
         labels, firstFlashcardFront,
         timeComplexity, timestamp, steps,
-        youtubeUrl,
+        youtubeUrl, topic
     } = data
 
-
     const flashcards = steps.map((step, index) => {
-        const back = step.replaceAll("\n", "<br/>")
         return {
-            front: index === 0 ? firstFlashcardFront : labels.join("\n"),
-            back,
+            front: (index === 0 && firstFlashcardFront) ? firstFlashcardFront + `\n${topic}` : labels.join("\n"),
+            back: step,
             source: timestamp ? `${youtubeUrl}&t=${timestamp}` : youtubeUrl,
             showPreviousBack: index !== 0
         }
@@ -588,32 +601,36 @@ function loopOverSteps(data) {
 
 function constructProblemFront(data) {
 
-    const { statementImages, solutionUrl, problemUrl, constraints } = data
+    const {
+        summary, description, ioExamples,
+        statementImages, solutionUrl, youtubeUrl, constraints
+    } = data
 
     const imageTags = statementImages.length > 1
         ? statementImages.slice(1).map(src => `<img src="${src}" class="memkey-leetcode-image"/>`).join("")
         : ""
 
-    const solutionUrlTag = !solutionUrl && !problemUrl ? "" :
+    const solutionUrlTag = !solutionUrl && !youtubeUrl ? "" :
         `<div>
-    <a href="${problemUrl}" class="memkey-link">Leetcode Problem</a> <br/>
-    <a href="${solutionUrl}" class="memkey-link">Leetcode Solution</a>
+<a href="${solutionUrl}" class="memkey-link">Leetcode Solutions</a> &nbsp;|&nbsp;
+<a href="${youtubeUrl}" class="memkey-link">Youtube Solution</a>
 </div>`
 
-    const front = `${imageTags}${solutionUrlTag}${constraints}`
+    const front = `${imageTags}${summary}${description}${ioExamples}${solutionUrlTag}${constraints}`
 
     return front
 }
 
 
-function waitForEnterKey() {
+function waitForEnterKey(prompt) {
+    prompt = prompt ?? 'Press Enter to continue...'
     return new Promise(resolve => {
         const rl = readline.createInterface({
             input: process.stdin,
             output: process.stdout
         });
 
-        rl.question('Press Enter to continue...', () => {
+        rl.question(prompt, () => {
             rl.close();
             resolve();
         });
@@ -626,14 +643,13 @@ async function fixAndUploadFlashcard({
     listImage,
     problemUrl, gptResponse
 }) {
-    console.log({ gptResponse })
-    console.log({ title })
-    objLog({
-        listImageUrl: listImage,
-        listThumbUrl: listImage,
-    })
-    console.log("Press enter after fixing the flashcard data")
-    await waitForEnterKey()
+    //console.log({ gptResponse })
+    //console.log({ title })
+    //objLog({
+    //    listImageUrl: listImage,
+    //    listThumbUrl: listImage,
+    //})
+    await waitForEnterKey("Press enter after fixing the flashcard data")
 
     const fixedListFlashcardsPath = `data/memkey/fixedFlashcards.js`
     const newListFlashcards = readArrayFromFile(currentFlashcardsPath)
@@ -647,9 +663,10 @@ async function fixAndUploadFlashcard({
 
     console.dir({ list },
         { depth: 4 })
-    await waitForEnterKey()
+    await waitForEnterKey("Press enter to upload")
     const listId = await saveList(list, COURSE_ID, MEMKEY_TOKEN)
     objLog({ listId })
-
-    //appendToProcessedUrls(PROCESSED_PATH, problemUrl)
+    if (listId) {
+        appendToProcessedUrls(PROCESSED_PATH, problemUrl)
+    }
 }
